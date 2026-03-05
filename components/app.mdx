@@ -150,17 +150,29 @@ The component renders:
 1. **RouteForm** - Input form for entering origin and destination coordinates
 2. **Result** - Displays the calculated route instructions
 
-## Usage Example
+## Usage
+
+The App component is defined and immediately rendered in `src/client/index.jsx`:
 
 ```jsx
 import React from 'react';
 import { render } from 'react-dom';
-import App from './App';
+import Map from './Map';
+import RouterForm from './RouteForm';
+import Result from './Result';
+
+class App extends React.Component {
+    // ... component implementation
+}
 
 render(<App />, document.getElementById('app'));
 ```
 
-The App component is rendered into the DOM element with id `app`. The Google Maps container must be a separate element with id `map`.
+The App component is rendered directly into the DOM element with id `app`. The Google Maps container is initialized globally after the render call with id `map`.
+
+<Note>
+The App class is not exported from index.jsx - it's an internal implementation that's rendered directly to the DOM.
+</Note>
 
 ## File Location
 

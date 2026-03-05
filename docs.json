@@ -8,10 +8,6 @@
     "dark": "#3367D6"
   },
   "favicon": "/favicon.svg",
-  "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
-  },
   "navbar": {
     "primary": {
       "type": "github",
@@ -50,6 +46,7 @@
             "pages": [
               "components/app",
               "components/route-form",
+              "components/latlng-fields",
               "components/map",
               "components/result"
             ]

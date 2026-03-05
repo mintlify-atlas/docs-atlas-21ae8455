@@ -1,0 +1,142 @@
+---
+title: 'LatLongFields Component'
+description: 'Input component for entering latitude and longitude coordinates'
+---
+
+## Overview
+
+The `LatLongFields` component is a reusable form input component that provides labeled input fields for entering latitude and longitude coordinates. It's used by the RouteForm component to handle coordinate entry for both origin and destination points.
+
+## Props
+
+<ParamField path="id" type="string" required>
+  Identifier for this field set - used to distinguish between multiple coordinate inputs (e.g., "from" or "to")
+</ParamField>
+
+<ParamField path="title" type="string" required>
+  Display label shown above the input fields (e.g., "Desde" for origin or "Hasta" for destination)
+</ParamField>
+
+<ParamField path="value" type="object" required>
+  Current coordinate values
+  
+  <ParamField path="value.lat" type="number" required>
+    Latitude value
+  </ParamField>
+  
+  <ParamField path="value.lng" type="number" required>
+    Longitude value
+  </ParamField>
+</ParamField>
+
+<ParamField path="onChange" type="function" required>
+  Callback function invoked when either coordinate changes. Receives three parameters:
+  - `id` (string): The field identifier passed as a prop
+  - `field` (string): The coordinate type that changed ("lat" or "lng")
+  - `value` (number): The new coordinate value
+</ParamField>
+
+## Component Structure
+
+```jsx
+export default class LatLongFields extends React.Component {
+    changeValue(field, value) {
+        this.props.onChange(this.props.id, field, value)
+    }
+
+    render() {
+        return (
+            <div>
+                <label>{this.props.title}</label>
+                <div>
+                    <span>Lat:</span>
+                    <input 
+                        type="number" 
+                        value={this.props.value.lat} 
+                        onChange={(e) => this.changeValue("lat", e.target.value)} 
+                    />
+                </div>
+                <div>
+                    <span>Lon:</span>
+                    <input 
+                        type="number" 
+                        value={this.props.value.lng} 
+                        onChange={(e) => this.changeValue("lng", e.target.value)} 
+                    />
+                </div>
+            </div>
+        )
+    }
+}
+```
+
+## Usage Example
+
+```jsx
+import LatLongFields from './LatLongFields';
+
+class MyComponent extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = {
+            origin: { lat: -34.603722, lng: -58.381592 }
+        };
+    }
+
+    handleCoordinateChange = (id, field, value) => {
+        this.setState(prevState => ({
+            origin: {
+                ...prevState.origin,
+                [field]: parseFloat(value)
+            }
+        }));
+    }
+
+    render() {
+        return (
+            <LatLongFields
+                id="origin"
+                title="Origin Point"
+                value={this.state.origin}
+                onChange={this.handleCoordinateChange}
+            />
+        );
+    }
+}
+```
+
+## Integration with RouteForm
+
+The `LatLongFields` component is used twice in the RouteForm component:
+
+```jsx
+<LatLongFields 
+    id="from" 
+    title="Desde" 
+    value={this.state.from}
+    onChange={this.onChange} 
+/>
+<LatLongFields 
+    id="to" 
+    title="Hasta" 
+    value={this.state.to}
+    onChange={this.onChange} 
+/>
+```
+
+The parent RouteForm manages the state and provides the onChange handler that updates coordinates immutably.
+
+## Input Behavior
+
+- **Type**: Number inputs (`<input type="number">`)
+- **Controlled**: Component values are controlled by parent state via props
+- **Change Flow**: Input onChange → changeValue() → props.onChange(id, field, value)
+- **Labels**: Spanish text - "Lat:" and "Lon:"
+
+<Note>
+The component uses controlled inputs, meaning all value changes must flow through the parent component's state management via the `onChange` callback.
+</Note>
+
+## File Location
+
+`src/client/LatLongFields.jsx`

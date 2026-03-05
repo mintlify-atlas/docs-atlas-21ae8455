@@ -81,6 +81,13 @@ This will install the following dependencies:
 - `concurrently` (^3.5.1) - Run multiple commands
 - `nodemon` (^1.12.1) - Auto-restart server
 
+<Note>
+The source code uses `node-fetch` in `ServerMockup.js` but it's not listed in `package.json`. You may need to install it manually:
+```bash
+npm install node-fetch
+```
+</Note>
+
 ### 3. Configure Google Maps API
 
 Open `public/index.html` and replace the API key in the Google Maps script tag:
