@@ -1,0 +1,93 @@
+{
+  "projectType": "frontend",
+  "projectName": "React Route Finder",
+  "projectDescription": "A React-based route finding application with Express backend that calculates optimal bus routes using Google Maps integration.",
+  "theme": "palm",
+  "primaryColor": "#4285F4",
+  "lightColor": "#5A95F5",
+  "darkColor": "#3367D6",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": [
+              "introduction",
+              "installation",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Architecture",
+            "pages": [
+              "architecture/overview",
+              "architecture/frontend",
+              "architecture/backend",
+              "architecture/route-algorithm"
+            ]
+          },
+          {
+            "group": "Components",
+            "pages": [
+              "components/app",
+              "components/route-form",
+              "components/map",
+              "components/result"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "configuration/environment",
+              "configuration/webpack",
+              "configuration/google-maps"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Endpoints",
+            "pages": [
+              "api/overview",
+              "api/all-routes",
+              "api/find-route"
+            ]
+          },
+          {
+            "group": "Route Algorithm",
+            "pages": [
+              "api/find-logic",
+              "api/point-class",
+              "api/stop-class",
+              "api/route-class"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Route finding algorithm with walking distance calculations",
+    "Google Maps integration for visual route display",
+    "React frontend with coordinate-based search",
+    "Express backend API for route processing",
+    "Webpack bundling with code splitting",
+    "Modular component architecture"
+  ],
+  "publicApiSurface": [
+    "GET /allRoutes - Retrieve all available bus stops and routes",
+    "POST /route - Find optimal route between two coordinates",
+    "App - Main React application component",
+    "RouteForm - Coordinate input form component",
+    "Map - Google Maps display component",
+    "Result - Route results display component",
+    "findRoute(busStopsData, routeData) - Core route finding algorithm",
+    "Point.distance(point) - Calculate distance between coordinates",
+    "Route.getNexRoutes() - Generate possible next route steps"
+  ]
+}
