@@ -1,0 +1,144 @@
+---
+title: 'API Overview'
+description: 'Learn about the React Route Finder Express backend API'
+---
+
+## Introduction
+
+The React Route Finder API is a RESTful Express backend service that provides route calculation and bus stop data for public transportation. The API enables clients to retrieve all available bus routes and calculate optimal paths between two geographic coordinates.
+
+## Base URL
+
+The API server runs on port **8080** by default:
+
+```
+http://localhost:8080
+```
+
+## Authentication
+
+Currently, the API does not require authentication. All endpoints are publicly accessible.
+
+## Available Endpoints
+
+The API provides two main endpoints:
+
+<CardGroup cols={2}>
+  <Card title="Get All Routes" icon="bus" href="/api/all-routes">
+    Retrieve all available bus stops and routes
+  </Card>
+  <Card title="Find Route" icon="route" href="/api/find-route">
+    Calculate optimal route between two coordinates
+  </Card>
+</CardGroup>
+
+### Endpoint Summary
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/allRoutes` | Returns all bus stops organized by branch/route |
+| POST | `/route` | Calculates optimal route between origin and destination |
+
+## Data Source
+
+The API fetches bus stop data from an external Laravel service running on port 8000:
+
+```javascript
+// src/server/ServerMockup.js:5
+fetch("http://localhost:8000/branch")
+```
+
+<Note>
+The external service must be running for the API to function properly.
+</Note>
+
+## Response Format
+
+All API responses are returned in JSON format. Successful responses contain the requested data, while errors return an object with an `error` property:
+
+```json
+{
+  "error": "Error message description"
+}
+```
+
+## Error Handling
+
+The API implements graceful error handling for all endpoints. Common error scenarios include:
+
+- External service unavailable
+- Invalid request parameters
+- No routes found between coordinates
+- No bus stops within walking distance
+
+## Usage Patterns
+
+### Basic Fetch Example
+
+```javascript
+// Fetch all routes
+const response = await fetch('http://localhost:8080/allRoutes');
+const busStops = await response.json();
+
+// Find a route
+const routeResponse = await fetch('http://localhost:8080/route', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    from: { lat: 40.7128, lng: -74.0060 },
+    to: { lat: 40.7580, lng: -73.9855 }
+  })
+});
+const route = await routeResponse.json();
+```
+
+### Error Handling Pattern
+
+```javascript
+try {
+  const response = await fetch('http://localhost:8080/route', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(routeData)
+  });
+  
+  const result = await response.json();
+  
+  if (result.error) {
+    console.error('API Error:', result.error);
+  } else {
+    // Process successful response
+    console.log('Route found:', result);
+  }
+} catch (error) {
+  console.error('Network Error:', error);
+}
+```
+
+## Route Calculation Parameters
+
+The route finding algorithm uses the following default parameters (defined in `src/server/FindLogic.js:34-38`):
+
+| Parameter | Value | Description |
+|-----------|-------|-------------|
+| `walkKmh` | 1 km/h | Walking speed |
+| `busKmh` | 60 km/h | Bus travel speed |
+| `busWaitH` | 0.5 hours | Average bus waiting time |
+| `maxWalkKm` | 0.8 km | Maximum walking distance to/from stops |
+
+<Tip>
+These parameters are used internally by the route calculation algorithm to determine optimal paths and walking distances.
+</Tip>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Get All Routes" icon="list" href="/api/all-routes">
+    Learn how to retrieve bus stop data
+  </Card>
+  <Card title="Find Route" icon="map" href="/api/find-route">
+    Learn how to calculate routes
+  </Card>
+</CardGroup>

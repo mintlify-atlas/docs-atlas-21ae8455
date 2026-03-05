@@ -1,0 +1,451 @@
+---
+title: 'findRoute Function'
+description: 'Main route-finding algorithm and helper functions'
+---
+
+## Overview
+
+The `findRoute` function is the core of the route-finding algorithm. It takes bus stop data and route parameters, then uses a breadth-first search with distance-based heuristics to find an optimal path from a starting location to a destination.
+
+## Function Signature
+
+```javascript
+findRoute(busStopsData, routeData)
+```
+
+### Parameters
+
+<ParamField path="busStopsData" type="Array<Object>" required>
+  Array of bus branches, where each branch contains an array of stops
+  
+  ```javascript
+  [
+    {
+      branch_id: "route_a",
+      stops: [
+        { id: "1", branch_id: "route_a", name: "First Stop", latitude: 40.7128, longitude: -74.0060 },
+        { id: "2", branch_id: "route_a", name: "Second Stop", latitude: 40.7580, longitude: -73.9855 }
+      ]
+    }
+  ]
+  ```
+</ParamField>
+
+<ParamField path="routeData" type="Object" required>
+  Object containing the start and destination coordinates
+  
+  <Expandable title="properties">
+    <ParamField path="from" type="Object" required>
+      Starting location with `lat` and `lng` properties (as strings or numbers)
+    </ParamField>
+    
+    <ParamField path="to" type="Object" required>
+      Destination location with `lat` and `lng` properties (as strings or numbers)
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+### Returns
+
+<ResponseField name="route" type="Array<Stop>">
+  An ordered array of Stop instances representing the optimal route from start to destination
+</ResponseField>
+
+### Throws
+
+- `"No existen paradas para empezar"` - No bus stops found within walking distance of start or destination
+- `"No hay rutas disponibles"` - No valid route found to the destination
+
+## Algorithm Configuration
+
+The algorithm uses the following constants to calculate travel times and determine walkability:
+
+```javascript
+const walkKmh = 1       // Walking speed: 1 km/h
+const busKmh = 60       // Bus speed: 60 km/h
+const busWaitH = 0.5    // Bus wait time: 0.5 hours (30 minutes)
+const maxWalkKm = 0.8   // Maximum walking distance: 0.8 km (800 meters)
+```
+
+<Note>
+  These configuration values affect how routes are evaluated. The `maxWalkKm` determines which stops are considered "walkable" from any given point, while the speed and wait time constants are available for future time-based optimizations.
+</Note>
+
+## Helper Functions
+
+The algorithm defines several helper functions for route exploration:
+
+### getNextStop()
+
+Finds the next stop on the same bus route.
+
+```javascript
+function getNextStop(point){
+    if(! point instanceof Stop ){
+        return null
+    }
+    const stopIndx = allStops.findIndex( s => point.id === s.id)
+    if( allStops.length -1 === stopIndx ){
+        return null
+    } else if( allStops[stopIndx + 1].branch_id !== point.branch_id ){
+        return null
+    } 
+    return allStops[stopIndx + 1]
+}
+```
+
+<Steps>
+  <Step title="Verify Stop Type">
+    Ensure the point is a Stop instance
+  </Step>
+  
+  <Step title="Find Current Position">
+    Locate the stop in the global stops array
+  </Step>
+  
+  <Step title="Check Bounds">
+    Return null if this is the last stop in the array
+  </Step>
+  
+  <Step title="Verify Same Branch">
+    Return null if the next stop belongs to a different branch (end of route)
+  </Step>
+  
+  <Step title="Return Next Stop">
+    Return the next stop in the sequence
+  </Step>
+</Steps>
+
+### getCloseStops()
+
+Finds all stops within walking distance of a given point.
+
+```javascript
+function getCloseStops(from){
+    return allStops
+            .filter(stop => from.distance(stop) <= maxWalkKm)
+}
+```
+
+This function is used to:
+- Find starting stops near the origin
+- Find ending stops near the destination
+- Find transfer stops the user can walk to
+
+### posiblesNextStops()
+
+Combines both strategies to find all possible next stops from a given stop.
+
+```javascript
+function posiblesNextStops(stop){
+    const ns = getNextStop(stop)
+    const closestStops = getCloseStops(stop)
+    return closestStops.concat( ns ? ns : [] )
+}
+```
+
+This returns:
+- All stops within walking distance (potential transfers)
+- The next stop on the same bus route (if available)
+
+<Tip>
+  By combining both walking and riding options, the algorithm can explore multi-modal routes that involve both bus rides and walking/transfers.
+</Tip>
+
+## Algorithm Flow
+
+The route-finding algorithm follows these steps:
+
+<Steps>
+  <Step title="Initialize Stop Data">
+    Flatten the bus stops data structure and create Stop instances
+    
+    ```javascript
+    const allStops = busStopsData
+                    .reduce( (stops,branch) => stops.concat(branch.stops) ,[])
+                    .map(s => new Stop(s))
+    ```
+  </Step>
+  
+  <Step title="Parse Start and Destination">
+    Create Point instances for the start and destination locations
+    
+    ```javascript
+    const start = new Point(
+        parseFloat(routeData.from.lat),
+        parseFloat(routeData.from.lng)
+    )
+    const destination = new Point(
+        parseFloat(routeData.to.lat),
+        parseFloat(routeData.to.lng)
+    )
+    ```
+  </Step>
+  
+  <Step title="Validate Starting Points">
+    Find stops within walking distance of the start location
+    
+    ```javascript
+    const firstStops = getCloseStops(start) 
+    if(firstStops.length < 1){
+        throw new Error("No existen paradas para empezar")
+    }
+    ```
+  </Step>
+  
+  <Step title="Validate Ending Points">
+    Find stops within walking distance of the destination
+    
+    ```javascript
+    const endsStops = getCloseStops(destination)
+    if(firstStops.length < 1){
+        throw new Error("No existen paradas para empezar")
+    }
+    ```
+  </Step>
+  
+  <Step title="Initialize Routes">
+    Create initial single-stop routes from each starting stop
+    
+    ```javascript
+    let allRoutes = firstStops.map( s => new Route([s]) )
+    ```
+  </Step>
+  
+  <Step title="Breadth-First Search">
+    Iteratively expand routes until a solution is found or limits are reached
+    
+    ```javascript
+    let go = true
+    let maxCount = 50
+    while (go) {
+        // Expand all routes
+        const nextRoutes = allRoutes.map( r => r.getNexRoutes() )
+                                    .filter( r => r.length)
+        
+        if(nextRoutes.length === 0 || maxCount === 0 ){
+            go = false
+        } else {
+            // Add new routes to the pool
+            nextRoutes.forEach((routes)=>{
+                routes.forEach( (r )=>allRoutes.push(r))
+            })
+        }
+        
+        maxCount --
+        
+        // Remove duplicates
+        allRoutes = allRoutes.filter( (r1,i,self) => 
+            self.findIndex( r2 => r2.isEqual(r1)) === i 
+        )
+        
+        // Sort by distance to destination (heuristic)
+        allRoutes.sort( (r1,r2) => 
+            r1.distance(destination) - r2.distance(destination) 
+        )
+        
+        // Stop if closest route is within walking distance
+        if(allRoutes[0].distance(destination) < walkKmh ){
+            go = false
+        }
+        
+        // Limit to top 10,000 routes
+        allRoutes = allRoutes.slice(0, maxRoutes)
+    }
+    ```
+  </Step>
+  
+  <Step title="Filter Valid Routes">
+    Find routes that end within walking distance of the destination
+    
+    ```javascript
+    validRoutes = allRoutes.filter( r => r.distance(destination) < maxWalkKm )
+    ```
+  </Step>
+  
+  <Step title="Return Best Route">
+    Return the first valid route (already sorted by distance)
+    
+    ```javascript
+    if(validRoutes.length){
+        return validRoutes[0].p
+    }
+    throw new Error("No hay rutas disponibles")
+    ```
+  </Step>
+</Steps>
+
+## Search Strategy
+
+The algorithm employs a **breadth-first search with distance-based prioritization**:
+
+### Breadth-First Expansion
+
+Each iteration expands all current routes by one stop:
+
+```javascript
+const nextRoutes = allRoutes.map( r => r.getNexRoutes() )
+                            .filter( r => r.length)
+```
+
+This ensures that shorter routes (fewer stops) are explored before longer ones.
+
+### Distance Heuristic
+
+Routes are sorted by their distance to the destination:
+
+```javascript
+allRoutes.sort( (r1,r2) => r1.distance(destination) - r2.distance(destination) )
+```
+
+This prioritizes routes that are getting closer to the destination, making the search more efficient.
+
+### Deduplication
+
+Duplicate routes are removed after each iteration:
+
+```javascript
+allRoutes = allRoutes.filter( (r1,i,self) => 
+    self.findIndex( r2 => r2.isEqual(r1)) === i 
+)
+```
+
+This prevents the algorithm from exploring the same path multiple times.
+
+### Route Validation
+
+Only routes that don't visit the same stop twice are kept:
+
+```javascript
+return nextStops.map( s => new Route (this.p.concat(s)) )
+                .filter(r => r.isValid() )
+```
+
+This prevents circular routes and backtracking.
+
+## Algorithm Limits
+
+Two limits prevent infinite loops and excessive resource usage:
+
+### maxRoutes
+
+Maximum number of routes to maintain in memory:
+
+```javascript
+const maxRoutes = 10000
+allRoutes = allRoutes.slice(0, maxRoutes)
+```
+
+After sorting by distance, only the top 10,000 most promising routes are kept.
+
+### maxCount
+
+Maximum number of iterations:
+
+```javascript
+let maxCount = 50
+while (go) {
+    // ... search logic
+    maxCount --
+}
+```
+
+The search stops after 50 iterations, even if no solution is found.
+
+<Note>
+  These limits are safeguards against pathological cases where the bus network might cause excessive route exploration. In practice, most routes are found within a few iterations.
+</Note>
+
+## Early Termination
+
+The algorithm can stop early under two conditions:
+
+### 1. No More Routes to Expand
+
+```javascript
+if(nextRoutes.length === 0 || maxCount === 0 ){
+    go = false
+}
+```
+
+If no routes can be expanded further (dead ends reached), the search terminates.
+
+### 2. Within Walking Distance
+
+```javascript
+if(allRoutes[0].distance(destination) < walkKmh ){
+    go = false
+}
+```
+
+If the best route is within walking distance of the destination, the search stops immediately.
+
+<Tip>
+  The walking distance check uses `walkKmh` (1 km) rather than `maxWalkKm` (0.8 km). This appears to be a bug in the original code - it should likely use `maxWalkKm` for consistency.
+</Tip>
+
+## Usage Example
+
+```javascript
+const busStopsData = [
+    {
+        branch_id: "route_1",
+        stops: [
+            { id: "1", branch_id: "route_1", name: "Stop A", latitude: 40.7128, longitude: -74.0060 },
+            { id: "2", branch_id: "route_1", name: "Stop B", latitude: 40.7580, longitude: -73.9855 }
+        ]
+    },
+    {
+        branch_id: "route_2",
+        stops: [
+            { id: "3", branch_id: "route_2", name: "Stop C", latitude: 40.7589, longitude: -73.9851 },
+            { id: "4", branch_id: "route_2", name: "Stop D", latitude: 40.7489, longitude: -73.9681 }
+        ]
+    }
+];
+
+const routeData = {
+    from: { lat: "40.7128", lng: "-74.0060" },
+    to: { lat: "40.7489", lng: "-73.9681" }
+};
+
+try {
+    const route = findRoute(busStopsData, routeData);
+    console.log(`Found route with ${route.length} stops`);
+    route.forEach((stop, i) => {
+        console.log(`${i + 1}. ${stop.name} (${stop.branch_id})`);
+    });
+} catch (error) {
+    console.error(error.message);
+}
+```
+
+## Performance Characteristics
+
+### Time Complexity
+
+- **Worst case**: O(maxCount × maxRoutes × avgNextStops)
+- **Typical case**: Much better due to early termination and distance heuristic
+
+### Space Complexity
+
+- **Maximum**: O(maxRoutes) = O(10,000) routes in memory
+- Each route stores an array of Stop references
+
+### Optimizations
+
+1. **Distance-based sorting**: Prioritizes promising routes
+2. **Deduplication**: Avoids redundant exploration
+3. **Route pruning**: Limits memory usage to top 10,000 routes
+4. **Early termination**: Stops when destination is reachable
+5. **Validation**: Prevents circular routes
+
+<Note>
+  The algorithm prioritizes finding *a* solution quickly over finding the *optimal* solution. The first valid route found (closest to destination) is returned, which may not be the absolute shortest or fastest route.
+</Note>
+
+## Related Classes
+
+- [Point Class](/api/point-class) - Geographic coordinate representation
+- [Stop Class](/api/stop-class) - Bus stop representation
+- [Route Class](/api/route-class) - Route representation and expansion

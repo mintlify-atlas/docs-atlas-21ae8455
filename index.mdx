@@ -1,97 +1,252 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: "React Route Finder"
+mode: "custom"
 ---
 
-## Setting up
+<div className="relative overflow-hidden bg-gradient-to-br from-[#4285F4] via-[#5A95F5] to-[#3367D6] py-20">
+  <div className="max-w-6xl mx-auto px-6">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+      <div className="lg:col-span-7">
+        <h1 className="text-5xl lg:text-6xl font-bold text-white mb-6">
+          Find Optimal Bus Routes with Ease
+        </h1>
+        <p className="text-xl text-white/90 max-w-2xl mb-8">
+          A React-based route finding application that calculates optimal bus routes using intelligent pathfinding algorithms and Google Maps integration.
+        </p>
+        <div className="flex flex-wrap gap-4">
+          <a
+            href="/quickstart"
+            className="inline-flex items-center px-6 py-3 bg-white text-[#4285F4] font-semibold rounded-lg hover:bg-gray-100 transition-colors"
+          >
+            Get Started
+          </a>
+          <a
+            href="/api/overview"
+            className="inline-flex items-center px-6 py-3 border-2 border-white/30 bg-white/10 text-white font-semibold rounded-lg hover:bg-white/20 transition-colors"
+          >
+            Explore API
+          </a>
+        </div>
+      </div>
+      <div className="lg:col-span-5">
+        <div className="relative">
+          <div className="absolute inset-0 bg-white/10 backdrop-blur-sm rounded-2xl"></div>
+          <div className="relative p-8 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
+              <span className="text-white font-medium">Real-time Route Calculation</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-3 h-3 bg-blue-400 rounded-full animate-pulse delay-75"></div>
+              <span className="text-white font-medium">Google Maps Integration</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-3 h-3 bg-purple-400 rounded-full animate-pulse delay-150"></div>
+              <span className="text-white font-medium">Walking Distance Optimization</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
-Get your documentation site up and running in minutes.
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+    Quick Start
+  </h2>
+  <p className="text-base text-gray-600 dark:text-gray-400 mb-8">
+    Get the Route Finder up and running in minutes
+  </p>
 
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
+  <Steps>
+    <Step title="Clone the Repository">
+      Start by cloning the project repository to your local machine.
 
-## Make it yours
+      ```bash
+      git clone https://github.com/JoelNuta/LaravelReact.git
+      cd LaravelReact
+      ```
+    </Step>
 
-Design a docs site that looks great and empowers your users.
+    <Step title="Install Dependencies">
+      Install all required npm packages for both the frontend and backend.
 
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
-  </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
-  </Card>
+      ```bash
+      npm install
+      ```
+
+      This installs React, Express, Webpack, Babel, and other dependencies.
+    </Step>
+
+    <Step title="Configure Google Maps API">
+      Add your Google Maps API key to the application. Edit `public/index.html` and replace the placeholder API key:
+
+      ```html
+      <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY"></script>
+      ```
+    </Step>
+
+    <Step title="Start the Application">
+      Launch both the development server and webpack build process:
+
+      ```bash
+      npm start
+      ```
+
+      The application will be available at `http://localhost:8080`
+    </Step>
+  </Steps>
+</div>
+
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+    Explore by Topic
+  </h2>
+  <p className="text-base text-gray-600 dark:text-gray-400 mb-8">
+    Deep dive into specific areas of the Route Finder application
+  </p>
+
+  <CardGroup cols={3}>
     <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
-  </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
-  </Card>
-</Columns>
+      title="Architecture"
+      icon="sitemap"
+      href="/architecture/overview"
+    >
+      Understand the system design, component structure, and data flow
+    </Card>
+    <Card
+      title="Components"
+      icon="puzzle-piece"
+      href="/components/app"
+    >
+      Explore React components including RouteForm, Map, and Result
+    </Card>
+    <Card
+      title="Route Algorithm"
+      icon="route"
+      href="/architecture/route-algorithm"
+    >
+      Learn how the pathfinding algorithm calculates optimal routes
+    </Card>
+    <Card
+      title="API Endpoints"
+      icon="server"
+      href="/api/overview"
+    >
+      Reference for /allRoutes and /route API endpoints
+    </Card>
+    <Card
+      title="Configuration"
+      icon="gear"
+      href="/configuration/webpack"
+    >
+      Configure Webpack bundling and Google Maps integration
+    </Card>
+    <Card
+      title="Installation Guide"
+      icon="download"
+      href="/installation"
+    >
+      Complete setup instructions and environment configuration
+    </Card>
+  </CardGroup>
+</div>
 
-## Create beautiful pages
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+    Key Features
+  </h2>
+  <p className="text-base text-gray-600 dark:text-gray-400 mb-8">
+    Everything you need for intelligent route finding
+  </p>
 
-Everything you need to create world-class documentation.
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div className="p-6 bg-gray-50 dark:bg-[#1a1d27] border border-gray-200 dark:border-[#27272a] rounded-xl">
+      <div className="w-12 h-12 bg-[#4285F4]/10 rounded-lg flex items-center justify-center mb-4">
+        <svg className="w-6 h-6 text-[#4285F4]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+        </svg>
+      </div>
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+        Intelligent Pathfinding
+      </h3>
+      <p className="text-sm text-gray-600 dark:text-gray-400">
+        Advanced algorithm that considers walking distance, bus connections, and transfer optimization to find the best route
+      </p>
+    </div>
 
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
+    <div className="p-6 bg-gray-50 dark:bg-[#1a1d27] border border-gray-200 dark:border-[#27272a] rounded-xl">
+      <div className="w-12 h-12 bg-[#4285F4]/10 rounded-lg flex items-center justify-center mb-4">
+        <svg className="w-6 h-6 text-[#4285F4]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+      </div>
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+        Google Maps Integration
+      </h3>
+      <p className="text-sm text-gray-600 dark:text-gray-400">
+        Visual route display with markers, directions, and interactive maps powered by Google Maps API
+      </p>
+    </div>
 
-## Need inspiration?
+    <div className="p-6 bg-gray-50 dark:bg-[#1a1d27] border border-gray-200 dark:border-[#27272a] rounded-xl">
+      <div className="w-12 h-12 bg-[#4285F4]/10 rounded-lg flex items-center justify-center mb-4">
+        <svg className="w-6 h-6 text-[#4285F4]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+        </svg>
+      </div>
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+        Real-time Calculation
+      </h3>
+      <p className="text-sm text-gray-600 dark:text-gray-400">
+        Express backend processes route requests instantly, calculating optimal paths based on current location data
+      </p>
+    </div>
 
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+    <div className="p-6 bg-gray-50 dark:bg-[#1a1d27] border border-gray-200 dark:border-[#27272a] rounded-xl">
+      <div className="w-12 h-12 bg-[#4285F4]/10 rounded-lg flex items-center justify-center mb-4">
+        <svg className="w-6 h-6 text-[#4285F4]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
+        </svg>
+      </div>
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+        Modular Architecture
+      </h3>
+      <p className="text-sm text-gray-600 dark:text-gray-400">
+        Clean component-based React architecture with separate client and server logic for easy maintenance
+      </p>
+    </div>
+  </div>
+</div>
+
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <div className="bg-gradient-to-br from-[#4285F4] to-[#3367D6] rounded-2xl p-8 md:p-12">
+    <div className="max-w-3xl">
+      <h2 className="text-3xl font-bold text-white mb-4">
+        Ready to Build Your Own Route Finder?
+      </h2>
+      <p className="text-lg text-white/90 mb-6">
+        Get started with our comprehensive documentation and explore how the intelligent pathfinding algorithm works under the hood.
+      </p>
+      <div className="flex flex-wrap gap-4">
+        <a
+          href="/quickstart"
+          className="inline-flex items-center px-6 py-3 bg-white text-[#4285F4] font-semibold rounded-lg hover:bg-gray-100 transition-colors"
+        >
+          Start Building
+          <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+          </svg>
+        </a>
+        <a
+          href="/architecture/route-algorithm"
+          className="inline-flex items-center px-6 py-3 border-2 border-white/30 bg-white/10 text-white font-semibold rounded-lg hover:bg-white/20 transition-colors"
+        >
+          Learn the Algorithm
+        </a>
+      </div>
+    </div>
+  </div>
+</div>

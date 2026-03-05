@@ -1,0 +1,133 @@
+---
+title: 'Architecture Overview'
+description: 'Understand the overall system architecture of React Route Finder'
+---
+
+## System Architecture
+
+React Route Finder is a full-stack JavaScript application that helps users find optimal bus routes between two geographic points. The application follows a client-server architecture with clear separation of concerns.
+
+## Architecture Components
+
+<Steps>
+  <Step title="Frontend Layer">
+    A React-based single-page application that provides the user interface for route input and visualization using Google Maps integration.
+  </Step>
+  
+  <Step title="Backend Layer">
+    An Express.js server that handles API requests and executes the route-finding algorithm.
+  </Step>
+  
+  <Step title="Data Layer">
+    Integration with a Laravel backend service (via ServerMockup) that provides bus stop and route data.
+  </Step>
+</Steps>
+
+## Technology Stack
+
+### Frontend
+- **React** - UI component library
+- **Google Maps JavaScript API** - Map rendering and directions display
+- **Webpack** - Module bundling and build system
+- **Babel** - JavaScript transpilation
+
+### Backend
+- **Express.js** - Web server framework
+- **Node.js** - Runtime environment
+- **node-fetch** - HTTP client for external API calls
+
+## Data Flow
+
+The application follows a unidirectional data flow pattern:
+
+```
+User Input (lat/lng coordinates)
+    ↓
+RouteForm Component
+    ↓
+App Component (findRoute method)
+    ↓
+POST /route endpoint
+    ↓
+ServerMockup (fetch bus stops data)
+    ↓
+FindLogic (route algorithm)
+    ↓
+Response (array of stops)
+    ↓
+App Component (updateMarkers)
+    ↓
+Google Maps Visualization + Result Component
+```
+
+## Request/Response Flow
+
+<Accordion title="Route Finding Request Flow">
+
+1. **User Input**: User enters origin and destination coordinates in the RouteForm
+2. **API Call**: React app sends POST request to `/route` with coordinates
+3. **Data Retrieval**: Server fetches bus stops from Laravel backend
+4. **Algorithm Execution**: FindLogic processes all stops and finds optimal route
+5. **Response**: Server returns ordered array of bus stops
+6. **Visualization**: React app displays route on map and in text format
+
+</Accordion>
+
+## Key Design Patterns
+
+### Component-Based UI
+The frontend uses React's component-based architecture for modularity and reusability:
+- `App` - Root component managing global state
+- `RouteForm` - User input collection
+- `Result` - Route display
+- `LatLongFields` - Coordinate input fields
+
+### RESTful API
+The backend exposes RESTful endpoints:
+- `GET /allRoutes` - Retrieve all available routes
+- `POST /route` - Calculate route between two points
+
+### Algorithm Encapsulation
+Route-finding logic is isolated in `FindLogic.js`, making it:
+- Testable independently
+- Easily replaceable with alternative algorithms
+- Reusable across different contexts
+
+## Build Process
+
+The application uses Webpack to bundle the React application:
+
+```javascript
+// webpack.config.js structure
+{
+  entry: './src/client/index.jsx',
+  output: './public/main.js',
+  optimization: {
+    splitChunks: {
+      // Separate vendor bundles
+    }
+  }
+}
+```
+
+<Info>
+  The build process separates vendor code (React, etc.) from application code for better caching and performance.
+</Info>
+
+## Deployment Architecture
+
+The application runs on a single Node.js server that:
+- Serves static files from the `/public` directory
+- Handles API requests on `/route` and `/allRoutes`
+- Listens on port 8080 by default
+
+<Note>
+  The ServerMockup currently points to a Laravel backend at `http://localhost:8000/branch`. In production, this should be configured to point to the actual backend service.
+</Note>
+
+## Next Steps
+
+Explore the detailed architecture documentation:
+- [Frontend Architecture](/architecture/frontend) - React component structure
+- [Backend Architecture](/architecture/backend) - Express server implementation
+- [Route Algorithm](/architecture/route-algorithm) - Pathfinding algorithm details

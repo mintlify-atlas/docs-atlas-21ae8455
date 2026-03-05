@@ -1,0 +1,158 @@
+---
+title: Introduction
+description: Learn about React Route Finder, an intelligent bus route planning application built with React and Express
+---
+
+# React Route Finder
+
+React Route Finder is a full-stack web application that helps users find optimal bus routes between two geographical locations. The application intelligently calculates the best path through a network of bus stops, considering walking distances and bus travel times.
+
+## What is React Route Finder?
+
+React Route Finder is a route optimization tool that:
+
+- Accepts start and end coordinates (latitude/longitude)
+- Searches through available bus stops and routes
+- Calculates the optimal path considering walking distance and bus routes
+- Visualizes the route on Google Maps with turn-by-turn directions
+- Provides step-by-step instructions for your journey
+
+The application uses a custom pathfinding algorithm that balances walking time and bus travel to find the most efficient route.
+
+## Key Features
+
+<Note>
+The route finder algorithm considers a maximum walking distance of 0.8km to/from bus stops, with average walking speed of 1 km/h and bus speed of 60 km/h.
+</Note>
+
+### Intelligent Route Finding
+
+The application implements a sophisticated route-finding algorithm that:
+
+- **Proximity Detection**: Identifies all bus stops within walking distance from your starting point
+- **Path Optimization**: Evaluates up to 10,000 possible routes to find the optimal path
+- **Multi-Stop Support**: Handles complex routes requiring multiple bus transfers
+- **Distance Calculation**: Uses the Haversine formula for accurate geographical distance calculations
+
+### Interactive Map Visualization
+
+- Real-time route visualization on Google Maps
+- Numbered markers for each bus stop in your route
+- Turn-by-turn directions with waypoints
+- Draggable map interface centered on Buenos Aires
+
+### Real-time Route Updates
+
+- Instant route calculation as you change coordinates
+- Visual feedback with route markers and paths
+- Step-by-step journey instructions
+
+## Use Cases
+
+React Route Finder is perfect for:
+
+- **Public Transportation Planning**: Find the best bus route combinations to reach your destination
+- **Urban Mobility**: Plan your journey through complex bus networks
+- **Travel Optimization**: Minimize total travel time by finding optimal transfer points
+- **Location-Based Services**: Integrate route finding into larger transportation applications
+
+## Architecture Overview
+
+React Route Finder follows a modern client-server architecture:
+
+```
+┌─────────────────────────────────────────┐
+│          Client (React)                  │
+│  ┌─────────────────────────────────┐   │
+│  │ RouteForm (coordinate input)    │   │
+│  │ Map (Google Maps visualization) │   │
+│  │ Result (route instructions)     │   │
+│  └─────────────────────────────────┘   │
+└──────────────┬──────────────────────────┘
+               │ HTTP POST /route
+               │ { from: {lat, lng}, to: {lat, lng} }
+               ▼
+┌─────────────────────────────────────────┐
+│          Server (Express)                │
+│  ┌─────────────────────────────────┐   │
+│  │ FindLogic (route algorithm)     │   │
+│  │ ServerMockup (bus stop data)    │   │
+│  └─────────────────────────────────┘   │
+└─────────────────────────────────────────┘
+```
+
+### Technology Stack
+
+**Frontend:**
+- React 16.3.2 for UI components
+- Google Maps JavaScript API for visualization
+- Webpack for bundling
+- Babel for ES6+ transpilation
+
+**Backend:**
+- Express 4.16.3 for API server
+- Node.js runtime
+- Custom route-finding algorithm
+- RESTful API architecture
+
+**Development Tools:**
+- Webpack for hot module reloading
+- Nodemon for server auto-restart
+- Concurrently for running multiple processes
+
+## How It Works
+
+<Steps>
+  <Step title="Enter Coordinates">
+    Users input starting and destination coordinates (latitude and longitude) through the RouteForm component
+  </Step>
+  
+  <Step title="Request Processing">
+    The client sends a POST request to `/route` endpoint with the coordinate data
+  </Step>
+  
+  <Step title="Route Calculation">
+    The server's FindLogic module:
+    - Loads all available bus stops and branches
+    - Finds walkable stops from the start location
+    - Generates possible routes using breadth-first search
+    - Evaluates routes based on distance and transfers
+    - Returns the optimal path
+  </Step>
+  
+  <Step title="Visualization">
+    The client receives the route and:
+    - Places numbered markers on the map for each stop
+    - Draws the path using Google Maps Directions API
+    - Displays step-by-step instructions
+  </Step>
+</Steps>
+
+## Algorithm Details
+
+The route finding algorithm uses several key parameters:
+
+```javascript
+const walkKmh = 1           // Walking speed: 1 km/h
+const busKmh = 60           // Bus speed: 60 km/h
+const busWaitH = 0.5        // Average bus wait time: 30 minutes
+const maxWalkKm = 0.8       // Maximum walking distance: 800 meters
+```
+
+The algorithm:
+1. Creates a Point class for distance calculations using the Haversine formula
+2. Builds a network graph of all bus stops
+3. Uses iterative deepening search to find valid routes
+4. Filters routes that end within walking distance of the destination
+5. Returns the route with the shortest distance to the destination
+
+<Info>
+The application uses the Haversine formula to calculate great-circle distances between coordinates, accounting for the Earth's curvature.
+</Info>
+
+## Next Steps
+
+Ready to get started? Follow our guides to install and run React Route Finder:
+
+- [Installation Guide](/installation) - Set up the development environment
+- [Quick Start](/quickstart) - Get your first route in under 5 minutes

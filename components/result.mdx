@@ -1,0 +1,192 @@
+---
+title: 'Result Component'
+description: 'Component that displays step-by-step route instructions'
+---
+
+## Overview
+
+The `Result` component displays the calculated route as a list of human-readable instructions. It processes the route data to remove intermediate stops on the same transit branch and presents clear walking and transit instructions.
+
+## Props
+
+<ParamField path="route" type="array" required>
+  Array of route points returned from the server. Each point contains stop information including `name`, `branch_id`, `latitude`, and `longitude`.
+</ParamField>
+
+### Route Point Structure
+
+Each point in the route array has the following structure:
+
+<ResponseField name="name" type="string">
+  The name of the stop or location
+</ResponseField>
+
+<ResponseField name="branch_id" type="number">
+  Identifier for the transit branch/line
+</ResponseField>
+
+<ResponseField name="latitude" type="number">
+  Latitude coordinate of the stop
+</ResponseField>
+
+<ResponseField name="longitude" type="number">
+  Longitude coordinate of the stop
+</ResponseField>
+
+<ResponseField name="id" type="number">
+  Unique identifier for the stop
+</ResponseField>
+
+## Helper Function
+
+### beautifyRoute
+
+Removes intermediate stops that are on the same transit branch, keeping only the boarding and alighting stops.
+
+<ParamField path="points" type="array" required>
+  Array of route points to process
+</ParamField>
+
+```jsx
+function beautifyRoute(points){
+    console.log(points)
+    return points.reduce((route, point) => {
+        const resp = route.concat(point)
+        
+        if(resp.length < 3){
+            return resp
+        }
+
+        if( resp[resp.length - 2].branch_id === resp[resp.length - 1].branch_id &&
+            resp[resp.length - 3].branch_id === resp[resp.length - 2].branch_id ){
+            resp.splice(resp.length - 2, 1)
+            return resp
+        }
+        return resp
+
+    }, [])
+}
+```
+
+**Algorithm:**
+1. Uses reduce to process points sequentially
+2. Adds each point to the result array
+3. If three consecutive points share the same `branch_id`, removes the middle one
+4. This eliminates unnecessary intermediate stops while preserving route structure
+
+**Example:**
+```
+Input:  [Stop A (branch 1), Stop B (branch 1), Stop C (branch 1), Stop D (branch 2)]
+Output: [Stop A (branch 1), Stop C (branch 1), Stop D (branch 2)]
+```
+
+## Component Logic
+
+```jsx
+export default function Result(props){
+    if(!props.route || !props.route.length)
+        return null 
+    const route = beautifyRoute(props.route)
+    const lis = route.map((point, i) => {
+        const action = i % 2 == 0 ? "Caminar hasta " : "Bajarse en " 
+        const label = point.name + " del ramal #" + point.branch_id
+        return <li key={i}>{action + label}</li>
+    })
+    return <ul>{lis}</ul>
+}
+```
+
+**Flow:**
+1. Returns `null` if no route data is available
+2. Processes the route through `beautifyRoute`
+3. Maps each point to a list item with alternating instructions:
+   - **Even indices (0, 2, 4...)**: "Caminar hasta" (Walk to)
+   - **Odd indices (1, 3, 5...)**: "Bajarse en" (Get off at)
+4. Combines the stop name with the branch identifier
+5. Renders as an unordered list
+
+## Instruction Pattern
+
+The component alternates between two types of instructions:
+
+- **Walk to**: "Caminar hasta [Stop Name] del ramal #[Branch ID]"
+- **Get off at**: "Bajarse en [Stop Name] del ramal #[Branch ID]"
+
+This pattern assumes:
+1. You walk to the first stop
+2. You get off at the next stop (after riding)
+3. You walk to the next transfer point
+4. And so on...
+
+## Usage Example
+
+```jsx
+import Result from './Result';
+
+function RouteDisplay() {
+    const route = [
+        {
+            id: 1,
+            name: "Plaza de Mayo",
+            branch_id: 5,
+            latitude: -34.6083,
+            longitude: -58.3712
+        },
+        {
+            id: 2,
+            name: "Catedral",
+            branch_id: 5,
+            latitude: -34.6076,
+            longitude: -58.3738
+        },
+        {
+            id: 3,
+            name: "9 de Julio",
+            branch_id: 5,
+            latitude: -34.6044,
+            longitude: -58.3815
+        },
+        {
+            id: 4,
+            name: "Tribunales",
+            branch_id: 3,
+            latitude: -34.6017,
+            longitude: -58.3845
+        }
+    ];
+    
+    return <Result route={route} />;
+}
+
+// Renders:
+// • Caminar hasta Plaza de Mayo del ramal #5
+// • Bajarse en 9 de Julio del ramal #5
+// • Caminar hasta Tribunales del ramal #3
+```
+
+Note that "Catedral" was removed by `beautifyRoute` since it's an intermediate stop on branch 5.
+
+## Rendered Output
+
+The component renders a simple unordered list:
+
+```html
+<ul>
+    <li>Caminar hasta Plaza de Mayo del ramal #5</li>
+    <li>Bajarse en 9 de Julio del ramal #5</li>
+    <li>Caminar hasta Tribunales del ramal #3</li>
+</ul>
+```
+
+## Empty State
+
+If the route is empty, undefined, or has no items, the component returns `null` and renders nothing:
+
+```jsx
+if(!props.route || !props.route.length)
+    return null
+```
+
+## File Location
+
+`src/client/Result.jsx`

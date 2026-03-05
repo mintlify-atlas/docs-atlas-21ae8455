@@ -1,0 +1,167 @@
+---
+title: 'App Component'
+description: 'The main application component that manages route finding and Google Maps integration'
+---
+
+## Overview
+
+The `App` component is the root component of the React Route Finder application. It manages the application state, coordinates the route finding process, and integrates with Google Maps to visualize routes and markers.
+
+## Component Structure
+
+The App component is a class-based React component that renders the main application layout and manages:
+- Route data state
+- Google Maps markers
+- Route finding operations
+- Map visualization updates
+
+## State
+
+<ResponseField name="route" type="object">
+  Stores the current route data returned from the server. Initially an empty object `{}`.
+</ResponseField>
+
+<ResponseField name="markers" type="array">
+  An array of Google Maps marker instances. Managed as an instance variable rather than state.
+</ResponseField>
+
+## Methods
+
+### findRoute
+
+Sends a POST request to the server to find an optimal route between two coordinates.
+
+<ParamField path="routeData" type="object" required>
+  Object containing `from` and `to` coordinates with `lat` and `lng` properties.
+</ParamField>
+
+```jsx
+findRoute(routeData) {
+    fetch("/route", {
+        method: "POST",
+        headers: {
+            "content-type": "application/json"
+        },
+        body: JSON.stringify(routeData)
+    }).then(resp => resp.json())
+        .then(route => {
+            this.setState({ route })
+            this.updateMarkers(route)
+        })
+        .catch(error => console.error(error.response.data))
+}
+```
+
+**Flow:**
+1. Sends route data to `/route` endpoint
+2. Updates component state with the returned route
+3. Calls `updateMarkers` to visualize the route on the map
+4. Handles errors if the request fails
+
+### updateMarkers
+
+Updates the Google Maps visualization by placing markers for each stop in the route and drawing the optimized path.
+
+<ParamField path="stops" type="array" required>
+  Array of stop objects, each containing `latitude`, `longitude`, `id`, and `name` properties.
+</ParamField>
+
+```jsx
+updateMarkers (stops){
+    this.markers.forEach(m=> m.setMap(null))
+    this.markers = []
+    const points = stops.map( s => ({lat:s.latitude,lng:s.longitude, id : s.id, title: s.name}))
+    points.forEach( p => {    
+        const marker = new google.maps.Marker({
+            position: p,
+            map: map,
+            draggable: false,
+            label: "" + p.id,
+            title: "" + p.title
+        })
+        this.markers.push(marker)
+    })
+    
+    const waypoints =  points.slice(1, -1).map( p => ({ location : p , stopover : false}))
+
+    directionsService.route({
+        origin: points[0],
+        destination: points[points.length - 1],
+        waypoints: waypoints,
+        optimizeWaypoints: true,
+        travelMode: 'DRIVING'
+        },function(response, status) {
+        if (status === 'OK') {
+            directionsDisplay.setDirections(response)
+            directionsDisplay.setOptions({
+                suppressMarkers: true
+            });
+        } else {
+            console.error(response)
+        }
+    })
+}
+```
+
+**Flow:**
+1. Removes all existing markers from the map
+2. Creates new markers for each stop with labels and titles
+3. Configures waypoints (all stops except first and last)
+4. Requests optimized driving directions from Google Maps
+5. Displays the route with custom markers (suppressing default markers)
+
+## Google Maps Initialization
+
+The Google Maps integration is initialized globally when the application loads:
+
+```jsx
+var directionsDisplay = new google.maps.DirectionsRenderer;
+var directionsService = new google.maps.DirectionsService;
+
+var bsas = { lat: -34.6037, lng: -58.3816 };
+
+var map = new google.maps.Map(document.getElementById('map'), {
+    zoom: 12,
+    center: bsas
+})
+directionsDisplay.setMap(map);
+```
+
+**Configuration:**
+- **Default Center:** Buenos Aires coordinates (-34.6037, -58.3816)
+- **Zoom Level:** 12
+- **Map Element:** References the `#map` DOM element
+- Uses Google Maps Directions API for route calculation and rendering
+
+## Render Method
+
+```jsx
+render() {
+    return (
+        <main>
+            <RouterForm onFind={this.findRoute} />
+            <Result route={this.state.route} />
+        </main>
+    )
+}
+```
+
+The component renders:
+1. **RouteForm** - Input form for entering origin and destination coordinates
+2. **Result** - Displays the calculated route instructions
+
+## Usage Example
+
+```jsx
+import React from 'react';
+import { render } from 'react-dom';
+import App from './App';
+
+render(<App />, document.getElementById('app'));
+```
+
+The App component is rendered into the DOM element with id `app`. The Google Maps container must be a separate element with id `map`.
+
+## File Location
+
+`src/client/index.jsx`

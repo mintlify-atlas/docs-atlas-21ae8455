@@ -1,0 +1,189 @@
+---
+title: 'Stop Class'
+description: 'Bus stop representation with geographic location'
+---
+
+## Overview
+
+The `Stop` class extends the [Point](/api/point-class) class to represent a bus stop with additional metadata. Each stop has a unique identifier, belongs to a specific bus branch (route), and has a name.
+
+## Constructor
+
+```javascript
+new Stop(data)
+```
+
+### Parameters
+
+<ParamField path="data" type="object" required>
+  An object containing stop information with the following properties:
+  
+  <Expandable title="properties">
+    <ParamField path="id" type="string | number" required>
+      Unique identifier for the bus stop
+    </ParamField>
+    
+    <ParamField path="branch_id" type="string | number" required>
+      Identifier for the bus route/branch this stop belongs to
+    </ParamField>
+    
+    <ParamField path="name" type="string" required>
+      Human-readable name of the bus stop
+    </ParamField>
+    
+    <ParamField path="latitude" type="number" required>
+      Latitude coordinate of the stop in decimal degrees
+    </ParamField>
+    
+    <ParamField path="longitude" type="number" required>
+      Longitude coordinate of the stop in decimal degrees
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+### Implementation
+
+```javascript
+class Stop extends Point{
+    constructor(data){
+        super(data.latitude, data.longitude)
+        this.id = data.id
+        this.branch_id = data.branch_id
+        this.name = data.name
+    }
+}
+```
+
+The Stop class inherits the `distance()` method from the Point class, allowing distance calculations between stops or from stops to arbitrary geographic points.
+
+## Properties
+
+<ResponseField name="id" type="string | number">
+  Unique identifier for this bus stop
+</ResponseField>
+
+<ResponseField name="branch_id" type="string | number">
+  Identifier for the bus route/branch. Stops with the same branch_id are sequential stops on the same bus route.
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  The display name of the bus stop
+</ResponseField>
+
+<ResponseField name="latitude" type="number">
+  Latitude coordinate (inherited from Point)
+</ResponseField>
+
+<ResponseField name="longitude" type="number">
+  Longitude coordinate (inherited from Point)
+</ResponseField>
+
+## Usage Examples
+
+### Creating a Stop
+
+```javascript
+const stopData = {
+    id: "stop_123",
+    branch_id: "route_a",
+    name: "Main Street & 5th Ave",
+    latitude: 40.7589,
+    longitude: -73.9851
+};
+
+const busStop = new Stop(stopData);
+```
+
+### Calculating Distance to a Stop
+
+```javascript
+const stop1 = new Stop({
+    id: "stop_1",
+    branch_id: "route_1",
+    name: "Downtown Station",
+    latitude: 40.7128,
+    longitude: -74.0060
+});
+
+const stop2 = new Stop({
+    id: "stop_2",
+    branch_id: "route_1",
+    name: "Midtown Plaza",
+    latitude: 40.7580,
+    longitude: -73.9855
+});
+
+const distance = stop1.distance(stop2);
+console.log(`Distance between stops: ${distance.toFixed(2)} km`);
+```
+
+### Finding Nearby Stops
+
+The route-finding algorithm uses stops to find which bus stops are within walking distance:
+
+```javascript
+function getCloseStops(from){
+    return allStops
+            .filter(stop => from.distance(stop) <= maxWalkKm)
+}
+
+// Find stops within 0.8 km of a point
+const currentLocation = new Point(40.7128, -74.0060);
+const nearbyStops = getCloseStops(currentLocation);
+```
+
+## Stop Sequences
+
+Stops with the same `branch_id` form a sequence along a bus route. The algorithm uses this to determine the next stop on a route:
+
+<Steps>
+  <Step title="Find Current Stop">
+    Locate the stop in the global stops array using its `id`
+  </Step>
+  
+  <Step title="Check Next Position">
+    Get the stop at the next index in the array
+  </Step>
+  
+  <Step title="Verify Same Branch">
+    Ensure the next stop has the same `branch_id` - if not, the current stop is the end of the route
+  </Step>
+</Steps>
+
+```javascript
+function getNextStop(point){
+    if(! point instanceof Stop ){
+        return null
+    }
+    const stopIndx = allStops.findIndex( s => point.id === s.id)
+    if( allStops.length -1 === stopIndx ){
+        return null
+    } else if( allStops[stopIndx + 1].branch_id !== point.branch_id ){
+        return null
+    } 
+    return allStops[stopIndx + 1]
+}
+```
+
+<Note>
+  Stops must be ordered correctly in the input data. The algorithm assumes that stops with the same `branch_id` appear sequentially in the array, representing the order in which a bus visits them.
+</Note>
+
+## Role in Route Finding
+
+The Stop class plays a critical role in the route-finding algorithm:
+
+1. **Starting Points**: Users begin their journey by walking to a nearby stop
+2. **Route Building**: Routes are constructed as sequences of stops
+3. **Transfers**: Users can walk between stops (different branch_ids) to transfer buses
+4. **Validation**: The algorithm prevents routes from visiting the same stop twice
+
+<Tip>
+  When preparing bus stop data, ensure that stops are ordered correctly within each branch_id, as the algorithm relies on array ordering to determine the sequence of stops along a route.
+</Tip>
+
+## Related Classes
+
+- [Point Class](/api/point-class) - Parent class providing geographic coordinate functionality
+- [Route Class](/api/route-class) - Uses Stop instances to construct routes
+- [Find Logic](/api/find-logic) - Main algorithm that processes stops

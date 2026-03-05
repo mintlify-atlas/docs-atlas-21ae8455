@@ -1,0 +1,425 @@
+---
+title: Google Maps Integration
+description: Configure Google Maps API for route visualization and directions
+---
+
+## Overview
+
+React Route Finder uses the Google Maps JavaScript API to display interactive maps and calculate route directions. This guide covers obtaining an API key, configuring the integration, and security best practices.
+
+## Required Google Maps APIs
+
+The application requires two Google Maps APIs:
+
+1. **Maps JavaScript API**: Displays the interactive map and route visualization
+2. **Directions API**: Calculates optimal routes between bus stops
+
+<Note>
+Both APIs must be enabled in your Google Cloud Console project for the application to work correctly.
+</Note>
+
+## Obtaining a Google Maps API Key
+
+<Steps>
+  <Step title="Create a Google Cloud Project">
+    1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+    2. Click "Select a project" → "New Project"
+    3. Enter a project name (e.g., "React Route Finder")
+    4. Click "Create"
+  </Step>
+  
+  <Step title="Enable Required APIs">
+    1. Navigate to "APIs & Services" → "Library"
+    2. Search for "Maps JavaScript API" and click "Enable"
+    3. Search for "Directions API" and click "Enable"
+    4. Wait for both APIs to be activated
+  </Step>
+  
+  <Step title="Create API Credentials">
+    1. Go to "APIs & Services" → "Credentials"
+    2. Click "Create Credentials" → "API key"
+    3. Copy the generated API key immediately
+    4. Click "Edit API key" to configure restrictions
+  </Step>
+  
+  <Step title="Restrict Your API Key">
+    Configure restrictions to protect your API key:
+    
+    **Application Restrictions:**
+    - Select "HTTP referrers (web sites)"
+    - Add your domain: `yourdomain.com/*`
+    - Add localhost for development: `localhost/*`
+    
+    **API Restrictions:**
+    - Select "Restrict key"
+    - Choose "Maps JavaScript API"
+    - Choose "Directions API"
+  </Step>
+</Steps>
+
+<Warning>
+Never commit API keys to version control. Use environment variables or configuration files excluded from git.
+</Warning>
+
+## Configuration
+
+### Adding the API Key
+
+The Google Maps API is loaded in `public/index.html`:
+
+<CodeGroup>
+
+```html public/index.html
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>React Route Finder</title>
+    <style>
+      #map {
+        height: 500px;
+        width: 500px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <div id="map"></div>
+    
+    <!-- Google Maps API -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY_HERE"></script>
+    
+    <!-- Application Bundles -->
+    <script src="vendors.js" type="text/javascript"></script>
+    <script src="main.js" type="text/javascript"></script>
+  </body>
+</html>
+```
+
+</CodeGroup>
+
+### Current Configuration
+
+The current `index.html` includes:
+
+```html
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAnqHyoZZ40B_NAjqhHx7acE0hxITrAV8s"></script>
+```
+
+<Warning>
+**Security Alert**: The API key in the repository is exposed and should be replaced immediately. This key should be regenerated and restricted before deploying to production.
+</Warning>
+
+### Configuration Options
+
+You can add additional parameters to the Google Maps script URL:
+
+<CodeGroup>
+
+```html Basic Configuration
+<script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY"></script>
+```
+
+```html With Libraries
+<script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&libraries=places,geometry"></script>
+```
+
+```html With Language and Region
+<script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&language=es&region=ES"></script>
+```
+
+```html Complete Example
+<script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&libraries=places,geometry&language=en&region=US"></script>
+```
+
+</CodeGroup>
+
+### URL Parameters
+
+- **key** (required): Your Google Maps API key
+- **libraries**: Additional API libraries (places, geometry, drawing, etc.)
+- **language**: Interface language (en, es, fr, etc.)
+- **region**: Regional bias for geocoding
+- **v**: API version (defaults to weekly)
+
+## Environment-Based Configuration
+
+### Using Build-Time Variables
+
+For better security, inject the API key during the build process:
+
+<Steps>
+  <Step title="Create Environment File">
+    Create a `.env` file in the project root:
+    
+    ```bash
+    GOOGLE_MAPS_API_KEY=your_actual_api_key_here
+    ```
+    
+    Add `.env` to `.gitignore`:
+    
+    ```bash
+    echo ".env" >> .gitignore
+    ```
+  </Step>
+  
+  <Step title="Install dotenv">
+    ```bash
+    npm install --save-dev dotenv
+    ```
+  </Step>
+  
+  <Step title="Create HTML Template">
+    Rename `index.html` to `index.template.html` and use a placeholder:
+    
+    ```html
+    <script src="https://maps.googleapis.com/maps/api/js?key=__GOOGLE_MAPS_API_KEY__"></script>
+    ```
+  </Step>
+  
+  <Step title="Build Script">
+    Create a build script that replaces the placeholder:
+    
+    ```javascript
+    // scripts/build-html.js
+    require('dotenv').config();
+    const fs = require('fs');
+    
+    const template = fs.readFileSync('public/index.template.html', 'utf8');
+    const html = template.replace('__GOOGLE_MAPS_API_KEY__', process.env.GOOGLE_MAPS_API_KEY);
+    
+    fs.writeFileSync('public/index.html', html);
+    ```
+    
+    Update `package.json`:
+    
+    ```json
+    "scripts": {
+      "prebuild": "node scripts/build-html.js",
+      "build": "webpack -p"
+    }
+    ```
+  </Step>
+</Steps>
+
+## Map Container Configuration
+
+The map is rendered in a container div defined in `index.html`:
+
+```html
+<div id="map"></div>
+```
+
+### Styling the Map Container
+
+The current CSS defines dimensions:
+
+```css
+#map {
+  height: 500px;
+  width: 500px;
+}
+```
+
+### Responsive Map Sizing
+
+For responsive layouts:
+
+<CodeGroup>
+
+```css Full Width
+#map {
+  height: 500px;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+```
+
+```css Full Viewport
+#map {
+  position: fixed;
+  top: 60px; /* Header height */
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: auto;
+  width: auto;
+}
+```
+
+```css Flex Layout
+.container {
+  display: flex;
+  height: 100vh;
+}
+
+#app {
+  flex: 0 0 400px;
+  overflow-y: auto;
+}
+
+#map {
+  flex: 1;
+  height: auto;
+}
+```
+
+</CodeGroup>
+
+## Security Best Practices
+
+### API Key Protection
+
+<Steps>
+  <Step title="Use Application Restrictions">
+    Always restrict your API key to specific domains:
+    
+    - Production: `yourdomain.com/*`
+    - Staging: `staging.yourdomain.com/*`
+    - Development: `localhost/*`
+  </Step>
+  
+  <Step title="Enable API Restrictions">
+    Limit the key to only required APIs:
+    
+    - Maps JavaScript API
+    - Directions API
+  </Step>
+  
+  <Step title="Set Usage Quotas">
+    Configure daily quotas to prevent excessive charges:
+    
+    1. Go to "APIs & Services" → "Quotas"
+    2. Set limits for each API
+    3. Enable billing alerts
+  </Step>
+  
+  <Step title="Monitor Usage">
+    Regularly check API usage:
+    
+    1. Go to "APIs & Services" → "Dashboard"
+    2. Review traffic patterns
+    3. Investigate unusual spikes
+  </Step>
+</Steps>
+
+### Never Commit API Keys
+
+Protect your API keys from version control:
+
+<CodeGroup>
+
+```bash .gitignore
+# Environment variables
+.env
+.env.local
+.env.production
+
+# Configuration with secrets
+config/secrets.json
+public/index.html
+```
+
+</CodeGroup>
+
+<Warning>
+If you accidentally commit an API key:
+
+1. Immediately regenerate the key in Google Cloud Console
+2. Update your configuration with the new key
+3. Use `git filter-branch` or BFG Repo-Cleaner to remove the key from history
+</Warning>
+
+## Usage Limits and Billing
+
+### Free Tier
+
+Google Cloud provides $200 monthly credit that covers:
+
+- **Maps JavaScript API**: 28,000 map loads per month
+- **Directions API**: 40,000 requests per month
+
+### Cost Optimization
+
+To minimize costs:
+
+1. **Cache Directions**: Store frequently requested routes
+2. **Debounce Requests**: Limit API calls during user interaction
+3. **Client-side Routing**: Calculate simple routes client-side when possible
+4. **Static Maps**: Use static maps for non-interactive views
+
+### Example: Request Caching
+
+```javascript
+// Cache directions results
+const directionsCache = new Map();
+
+function getDirections(origin, destination) {
+  const cacheKey = `${origin.lat},${origin.lng}-${destination.lat},${destination.lng}`;
+  
+  if (directionsCache.has(cacheKey)) {
+    return Promise.resolve(directionsCache.get(cacheKey));
+  }
+  
+  return directionsService.route({
+    origin: origin,
+    destination: destination,
+    travelMode: 'DRIVING'
+  }).then(result => {
+    directionsCache.set(cacheKey, result);
+    return result;
+  });
+}
+```
+
+## Troubleshooting
+
+### API Key Errors
+
+**Error: "This page can't load Google Maps correctly"**
+
+- Verify the API key is correct in `index.html`
+- Check that Maps JavaScript API is enabled
+- Verify billing is enabled in Google Cloud Console
+
+**Error: "Google Maps API error: RefererNotAllowedMapError"**
+
+- Add your domain to HTTP referrer restrictions
+- Include both `yourdomain.com` and `www.yourdomain.com`
+- Add `localhost` for local development
+
+### Map Not Displaying
+
+**Black or gray box instead of map:**
+
+- Ensure the map container has explicit dimensions (height and width)
+- Verify the Google Maps script loads before your application bundle
+- Check browser console for JavaScript errors
+
+**Map loads but is blank:**
+
+- Check that Directions API is enabled
+- Verify valid coordinates are being used
+- Inspect network tab for failed API requests
+
+### Performance Issues
+
+**Slow map loading:**
+
+- Use the `v=weekly` parameter for consistent versions
+- Load the Google Maps script with `async defer` attributes
+- Consider lazy-loading the map for below-the-fold content
+
+**Too many API requests:**
+
+- Implement request caching
+- Debounce user input that triggers API calls
+- Use client-side geometry calculations when possible
+
+## Additional Resources
+
+- [Google Maps JavaScript API Documentation](https://developers.google.com/maps/documentation/javascript)
+- [Directions API Documentation](https://developers.google.com/maps/documentation/directions)
+- [API Key Best Practices](https://developers.google.com/maps/api-security-best-practices)
+- [Pricing and Usage Limits](https://developers.google.com/maps/billing/gmp-billing)

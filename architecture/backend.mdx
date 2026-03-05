@@ -1,0 +1,361 @@
+---
+title: 'Backend Architecture'
+description: 'Understand the Express server structure and API implementation'
+---
+
+## Server Overview
+
+The backend is a lightweight Express.js server that acts as an intermediary between the React frontend and the Laravel backend service, while also executing the route-finding algorithm.
+
+**Location**: `src/server/server.js`  
+**Port**: 8080
+
+## Server Structure
+
+```javascript
+const express = require("express")
+const ServerMockup = require("./ServerMockup")
+const findLogic = require("./FindLogic")
+const app = express()
+```
+
+The server has three main responsibilities:
+1. **Static File Serving** - Serves the React application
+2. **API Endpoints** - Handles route calculation requests
+3. **Data Integration** - Fetches bus stop data from Laravel backend
+
+## Static File Serving
+
+```javascript
+const baseFolder = path.resolve(__dirname, '../../public')
+app.use("/", express.static(baseFolder))
+```
+
+All files in the `/public` directory are served at the root path, including:
+- `index.html` - Main HTML page
+- `main.js` - React application bundle
+- `vendors.js` - Third-party dependencies
+- CSS and other assets
+
+## API Endpoints
+
+### GET /allRoutes
+
+Retrieves all available bus routes and stops from the backend.
+
+**Location**: `src/server/server.js:17-24`
+
+```javascript
+app.get("/allRoutes", (req, resp) => {
+    ServerMockup()
+        .then(busStopsData => resp.json(busStopsData))
+        .catch((err) => {
+            console.error(err)
+            resp.json({ error: err.message })
+        })
+})
+```
+
+**Response Format**:
+```json
+[
+    {
+        "id": 1,
+        "branch_id": 101,
+        "stops": [
+            {
+                "id": 1,
+                "name": "Stop Name",
+                "latitude": -34.6037,
+                "longitude": -58.3816,
+                "branch_id": 101
+            }
+        ]
+    }
+]
+```
+
+<Note>
+  This endpoint is currently unused by the frontend but available for future features like displaying all routes on the map.
+</Note>
+
+### POST /route
+
+Calculates the optimal route between two geographic points.
+
+**Location**: `src/server/server.js:27-38`
+
+```javascript
+app.post("/route", (req, resp) => {
+    const routeData = req.body
+    ServerMockup()
+        .then(busStopsData => {
+            const route = findLogic.findRoute(busStopsData, routeData)
+            resp.json(route)
+        })
+        .catch((err) => {
+            console.error(err)
+            resp.json({ error: err.message })
+        })
+})
+```
+
+**Request Body**:
+```json
+{
+    "from": {
+        "lat": -34.5593,
+        "lng": -58.4569
+    },
+    "to": {
+        "lat": -34.5805,
+        "lng": -58.4513
+    }
+}
+```
+
+**Response**: Array of stop objects representing the optimal route
+
+```json
+[
+    {
+        "id": 5,
+        "name": "Avenida Principal",
+        "latitude": -34.5600,
+        "longitude": -58.4570,
+        "branch_id": 101
+    },
+    {
+        "id": 12,
+        "name": "Calle Secundaria",
+        "latitude": -34.5750,
+        "longitude": -58.4520,
+        "branch_id": 101
+    }
+]
+```
+
+## Request Flow Diagram
+
+<Steps>
+  <Step title="Client Request">
+    Frontend sends POST request to `/route` with origin and destination
+  </Step>
+  
+  <Step title="Data Retrieval">
+    Server calls `ServerMockup()` to fetch bus stops from Laravel backend
+  </Step>
+  
+  <Step title="Route Calculation">
+    Server passes bus stops and route parameters to `findLogic.findRoute()`
+  </Step>
+  
+  <Step title="Algorithm Execution">
+    FindLogic analyzes all possible routes and returns optimal path
+  </Step>
+  
+  <Step title="Response">
+    Server returns array of stops to client as JSON
+  </Step>
+</Steps>
+
+## ServerMockup Integration
+
+The ServerMockup module abstracts the connection to the Laravel backend.
+
+**Location**: `src/server/ServerMockup.js`
+
+```javascript
+const fetch = require("node-fetch")
+
+module.exports = function () {
+    return fetch("http://localhost:8000/branch")
+        .then(r => r.json())
+        .catch(error => console.error(error.response.data))
+}
+```
+
+### Purpose
+
+- Decouples backend logic from data source
+- Makes it easy to swap in different data sources
+- Provides a mockable interface for testing
+
+<Tip>
+  The name "ServerMockup" suggests this was originally a mock implementation. In production, this would be replaced with actual service integration.
+</Tip>
+
+### Laravel Backend Contract
+
+The Laravel backend is expected to expose:
+
+**Endpoint**: `GET http://localhost:8000/branch`
+
+**Expected Response**:
+```json
+[
+    {
+        "id": 1,
+        "name": "Branch 1",
+        "stops": [
+            {
+                "id": 1,
+                "name": "Stop Name",
+                "latitude": -34.6037,
+                "longitude": -58.3816,
+                "branch_id": 1
+            }
+        ]
+    }
+]
+```
+
+## Middleware Configuration
+
+```javascript
+app.use(express.json())
+```
+
+The `express.json()` middleware is essential for:
+- Parsing JSON request bodies
+- Making `req.body` available in route handlers
+- Required for the POST `/route` endpoint
+
+## Error Handling
+
+Current error handling strategy:
+
+```javascript
+.catch((err) => {
+    console.error(err)
+    resp.json({ error: err.message })
+})
+```
+
+<Info>
+  Errors are logged to console and returned to client. In production, consider:
+  - Using a proper logging service
+  - Sanitizing error messages for security
+  - Returning appropriate HTTP status codes
+  - Implementing error monitoring
+</Info>
+
+## Server Initialization
+
+```javascript
+app.listen(8080, () => {
+    console.log("Server UP!")
+})
+```
+
+The server listens on port 8080 and logs a confirmation message when ready.
+
+## Architecture Patterns
+
+### Separation of Concerns
+
+The backend demonstrates clear separation:
+
+| Component | Responsibility |
+|-----------|---------------|
+| `server.js` | HTTP handling, routing, middleware |
+| `ServerMockup.js` | External data fetching |
+| `FindLogic.js` | Route calculation algorithm |
+
+### Stateless Design
+
+The server maintains no session state:
+- Each request is independent
+- No user authentication or sessions
+- Easily horizontally scalable
+
+### Asynchronous Flow
+
+All operations use Promises:
+```
+ServerMockup() → Promise<busStopsData>
+    ↓
+findLogic.findRoute() → Array<stops>
+    ↓
+resp.json() → Send to client
+```
+
+## Performance Considerations
+
+### Current Limitations
+
+1. **No Caching**: Bus stop data is fetched on every request
+2. **Synchronous Algorithm**: Route finding blocks the event loop
+3. **No Request Validation**: Input coordinates aren't validated
+
+### Potential Optimizations
+
+<Accordion title="Implement Caching">
+
+Cache bus stop data with periodic refresh:
+
+```javascript
+let cachedData = null
+let lastFetch = 0
+const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+
+async function getBusStops() {
+    if (cachedData && Date.now() - lastFetch < CACHE_TTL) {
+        return cachedData
+    }
+    cachedData = await ServerMockup()
+    lastFetch = Date.now()
+    return cachedData
+}
+```
+
+</Accordion>
+
+<Accordion title="Add Request Validation">
+
+Validate coordinates before processing:
+
+```javascript
+function validateCoordinates(point) {
+    return point.lat >= -90 && point.lat <= 90 &&
+           point.lng >= -180 && point.lng <= 180
+}
+```
+
+</Accordion>
+
+<Accordion title="Implement Rate Limiting">
+
+Prevent abuse with rate limiting:
+
+```javascript
+const rateLimit = require('express-rate-limit')
+
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 100
+})
+
+app.use('/route', limiter)
+```
+
+</Accordion>
+
+## Security Considerations
+
+Current security gaps:
+
+- No CORS configuration
+- No input sanitization
+- No authentication/authorization
+- Error messages expose internal details
+
+<Note>
+  For production deployment, implement proper security measures including CORS, input validation, authentication, and sanitized error responses.
+</Note>
+
+## Next Steps
+
+Learn more about:
+- [Route Algorithm](/architecture/route-algorithm) - How routes are calculated
+- [Frontend Architecture](/architecture/frontend) - Client-side implementation

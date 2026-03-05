@@ -1,0 +1,231 @@
+---
+title: Installation
+description: Step-by-step guide to install and configure React Route Finder on your local machine
+---
+
+# Installation Guide
+
+This guide will walk you through installing React Route Finder and setting up your development environment.
+
+## Prerequisites
+
+Before you begin, ensure you have the following installed on your system:
+
+<Note>
+React Route Finder requires Node.js and npm to run. Make sure you have at least Node.js 8.x or higher.
+</Note>
+
+### Required Software
+
+- **Node.js** (v8.x or higher) - JavaScript runtime
+- **npm** (v5.x or higher) - Package manager (comes with Node.js)
+- **Google Maps API Key** - For map visualization features
+
+### Getting a Google Maps API Key
+
+<Steps>
+  <Step title="Go to Google Cloud Console">
+    Visit [Google Cloud Console](https://console.cloud.google.com/)
+  </Step>
+  
+  <Step title="Create or select a project">
+    Create a new project or select an existing one
+  </Step>
+  
+  <Step title="Enable APIs">
+    Enable the following APIs:
+    - Maps JavaScript API
+    - Directions API
+  </Step>
+  
+  <Step title="Create credentials">
+    Navigate to "Credentials" and create an API key
+  </Step>
+</Steps>
+
+<Warning>
+Keep your API key secure and never commit it to version control. Consider using environment variables in production.
+</Warning>
+
+## Installation Steps
+
+### 1. Clone the Repository
+
+```bash
+git clone <your-repository-url>
+cd react-route-finder
+```
+
+### 2. Install Dependencies
+
+Install all required npm packages:
+
+```bash
+npm install
+```
+
+This will install the following dependencies:
+
+**Production Dependencies:**
+- `react` (^16.3.2) - UI framework
+- `react-dom` (^16.3.2) - React rendering
+- `express` (^4.16.3) - Web server
+- `babel-core` (^6.26.3) - JavaScript transpiler
+- `babel-loader` (^7.1.4) - Webpack Babel integration
+- `babel-preset-env` (^1.7.0) - Babel environment preset
+- `babel-preset-react` (^6.24.1) - Babel React preset
+- `webpack` (^4.8.3) - Module bundler
+- `webpack-cli` (^2.1.4) - Webpack command line
+
+**Development Dependencies:**
+- `concurrently` (^3.5.1) - Run multiple commands
+- `nodemon` (^1.12.1) - Auto-restart server
+
+### 3. Configure Google Maps API
+
+Open `public/index.html` and replace the API key in the Google Maps script tag:
+
+```html
+<script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY_HERE"></script>
+```
+
+Replace `YOUR_API_KEY_HERE` with your actual Google Maps API key.
+
+<Info>
+The current index.html contains a sample API key. You must replace it with your own key for the application to work properly.
+</Info>
+
+### 4. Configure Backend Data Source
+
+The application uses `ServerMockup.js` to fetch bus stop data. By default, it expects a Laravel backend at `http://localhost:8000/branch`.
+
+Open `src/server/ServerMockup.js` and configure your data source:
+
+```javascript
+module.exports = function () {
+    return fetch("http://localhost:8000/branch")
+        .then(r => r.json())
+        .catch(error => console.error(error.response.data))
+}
+```
+
+<Note>
+You can modify this function to return mock data or connect to a different API endpoint that provides bus stop information.
+</Note>
+
+Expected data format:
+
+```json
+[
+  {
+    "id": 1,
+    "name": "Branch 1",
+    "stops": [
+      {
+        "id": 1,
+        "branch_id": 1,
+        "name": "Stop Name",
+        "latitude": -34.603722,
+        "longitude": -58.381592
+      }
+    ]
+  }
+]
+```
+
+## Project Structure
+
+After installation, your project should have the following structure:
+
+```
+react-route-finder/
+├── public/                  # Static files
+│   └── index.html          # HTML template with map container
+├── src/
+│   ├── client/             # React frontend
+│   │   ├── index.jsx       # Main app component
+│   │   ├── RouteForm.jsx   # Coordinate input form
+│   │   ├── Result.jsx      # Route instructions display
+│   │   ├── Map.jsx         # Map component (logic in index.jsx)
+│   │   └── LatLongFields.jsx # Lat/long input fields
+│   └── server/             # Express backend
+│       ├── server.js       # Express server setup
+│       ├── FindLogic.js    # Route finding algorithm
+│       └── ServerMockup.js # Bus stop data provider
+├── .babelrc                # Babel configuration
+├── webpack.config.js       # Webpack configuration
+└── package.json           # Project dependencies and scripts
+```
+
+### Key Files Explained
+
+**Client Side:**
+- `index.jsx` - Main React app, handles route finding and map integration
+- `RouteForm.jsx` - Form component for entering start/end coordinates
+- `Result.jsx` - Displays step-by-step route instructions
+- `LatLongFields.jsx` - Reusable component for lat/long inputs
+
+**Server Side:**
+- `server.js` - Express server with `/route` POST endpoint and `/allRoutes` GET endpoint
+- `FindLogic.js` - Core pathfinding algorithm using distance calculations
+- `ServerMockup.js` - Fetches bus stop data from external API
+
+## Verify Installation
+
+Check that all dependencies are installed correctly:
+
+```bash
+npm list --depth=0
+```
+
+You should see all packages listed in `package.json` without any errors.
+
+## Configuration Files
+
+### .babelrc
+
+The project uses Babel to transpile modern JavaScript and JSX:
+
+```json
+{
+  "presets": ["env", "react"]
+}
+```
+
+### webpack.config.js
+
+Webpack bundles the application and splits vendor libraries for optimal loading.
+
+## Troubleshooting
+
+### npm install fails
+
+<Warning>
+If you encounter errors during `npm install`, try deleting `node_modules` and `package-lock.json`, then run `npm install` again.
+</Warning>
+
+```bash
+rm -rf node_modules package-lock.json
+npm install
+```
+
+### Port 8080 already in use
+
+If port 8080 is occupied, modify the port in `src/server/server.js`:
+
+```javascript
+app.listen(3000, () => {
+    console.log("Server UP!")
+})
+```
+
+### Google Maps not loading
+
+Verify that:
+1. Your API key is correctly configured in `public/index.html`
+2. The Maps JavaScript API and Directions API are enabled in Google Cloud Console
+3. Your API key has no restrictions that block localhost
+
+## Next Steps
+
+Now that you've installed React Route Finder, proceed to the [Quick Start Guide](/quickstart) to run the application and find your first route.

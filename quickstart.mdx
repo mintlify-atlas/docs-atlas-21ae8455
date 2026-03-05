@@ -1,80 +1,333 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quick Start
+description: Get React Route Finder up and running in under 5 minutes
 ---
 
-## Get started in three steps
+# Quick Start Guide
 
-Get your documentation site running locally and make your first customization.
-
-### Step 1: Set up your local environment
-
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
-
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
-
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 3: Go live
-
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
-
-## Next steps
-
-Now that you have your docs running, explore these key features:
-
-<CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
-</CardGroup>
+This guide will get you from installation to finding your first bus route in under 5 minutes.
 
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+Make sure you've completed the [Installation Guide](/installation) before starting this tutorial.
 </Note>
+
+## Start the Development Server
+
+React Route Finder uses a concurrent development setup that runs both the Webpack dev server and the Express backend simultaneously.
+
+### Run the Application
+
+Execute the start command:
+
+```bash
+npm start
+```
+
+This command runs `concurrently --kill-others "npm run dev" "npm run serverDev"`, which:
+
+1. **Webpack Dev Server** (`npm run dev`) - Watches and rebuilds your React code on changes
+2. **Express Server** (`npm run serverDev`) - Runs the API server with auto-restart via nodemon
+
+<Info>
+The `--kill-others` flag ensures that if one process fails, the other is terminated automatically.
+</Info>
+
+You should see output similar to:
+
+```
+[0] webpack is watching the files…
+[1] Server UP!
+```
+
+### Access the Application
+
+Open your browser and navigate to:
+
+```
+http://localhost:8080
+```
+
+You should see:
+- A form with latitude/longitude input fields
+- A "Buscar ruta" (Find Route) button
+- A Google Map centered on Buenos Aires
+
+## Find Your First Route
+
+### Understanding the Interface
+
+The application displays three main elements:
+
+1. **Route Form** - Input fields for start and destination coordinates
+2. **Map** - Interactive Google Maps visualization
+3. **Results** - Step-by-step route instructions (appears after search)
+
+### Default Coordinates
+
+The application comes with pre-filled coordinates in Buenos Aires:
+
+**From (Start):**
+- Latitude: `-34.55931882107318`
+- Longitude: `-58.456907455139174`
+
+**To (Destination):**
+- Latitude: `-34.58049629262017`
+- Longitude: `-58.45130747926478`
+
+### Find a Route
+
+<Steps>
+  <Step title="Use default coordinates">
+    The form is pre-filled with valid coordinates. Simply click "Buscar ruta" to find a route.
+  </Step>
+  
+  <Step title="View the results">
+    After clicking, the application will:
+    - Send coordinates to the `/route` endpoint
+    - Calculate the optimal bus route
+    - Display numbered markers on the map
+    - Show step-by-step instructions
+  </Step>
+  
+  <Step title="Interpret the route">
+    The results show alternating instructions:
+    - "Caminar hasta [Stop Name] del ramal #[Branch]" - Walk to this stop
+    - "Bajarse en [Stop Name] del ramal #[Branch]" - Get off at this stop
+  </Step>
+</Steps>
+
+### Example Output
+
+After finding a route, you'll see instructions like:
+
+```
+• Caminar hasta Stop A del ramal #5
+• Bajarse en Stop B del ramal #5
+• Caminar hasta Stop C del ramal #12
+• Bajarse en Stop D del ramal #12
+```
+
+The map will show:
+- Numbered markers for each stop
+- A blue route line connecting the stops
+- Turn-by-turn directions
+
+## Make an API Request
+
+You can also interact with the API directly using curl or any HTTP client.
+
+### POST /route
+
+Find a route between two coordinates:
+
+```bash
+curl -X POST http://localhost:8080/route \
+  -H "Content-Type: application/json" \
+  -d '{
+    "from": {
+      "lat": "-34.55931882107318",
+      "lng": "-58.456907455139174"
+    },
+    "to": {
+      "lat": "-34.58049629262017",
+      "lng": "-58.45130747926478"
+    }
+  }'
+```
+
+**Response:**
+
+```json
+[
+  {
+    "id": 123,
+    "branch_id": 5,
+    "name": "Stop Name A",
+    "latitude": -34.559,
+    "longitude": -58.456
+  },
+  {
+    "id": 124,
+    "branch_id": 5,
+    "name": "Stop Name B",
+    "latitude": -34.565,
+    "longitude": -58.453
+  }
+]
+```
+
+<Warning>
+If no route is found, the API returns an error: `{"error": "No hay rutas disponibles"}`
+</Warning>
+
+### GET /allRoutes
+
+Retrieve all available bus routes and stops:
+
+```bash
+curl http://localhost:8080/allRoutes
+```
+
+This endpoint returns the complete bus network data structure.
+
+## Customize Your Route Search
+
+### Enter Custom Coordinates
+
+<Steps>
+  <Step title="Clear the form">
+    Delete the default coordinates in the "Desde" (From) and "Hasta" (To) fields
+  </Step>
+  
+  <Step title="Enter new coordinates">
+    Input your desired latitude and longitude values. For example:
+    
+    **From:**
+    - Lat: `-34.6037`
+    - Lng: `-58.3816`
+    
+    **To:**
+    - Lat: `-34.6158`
+    - Lng: `-58.4333`
+  </Step>
+  
+  <Step title="Find route">
+    Click "Buscar ruta" to calculate the new route
+  </Step>
+</Steps>
+
+### Get Coordinates from Google Maps
+
+To find coordinates for any location:
+
+1. Open [Google Maps](https://www.google.com/maps)
+2. Right-click on your desired location
+3. Click the coordinates to copy them
+4. Paste into the React Route Finder form
+
+## Understanding the Algorithm
+
+The route finder uses these parameters:
+
+```javascript
+walkKmh = 1        // Walking speed: 1 km/h
+busKmh = 60        // Bus speed: 60 km/h
+busWaitH = 0.5     // Wait time: 30 minutes
+maxWalkKm = 0.8    // Max walk: 800 meters
+```
+
+### Route Finding Process
+
+<Steps>
+  <Step title="Find nearby stops">
+    The algorithm identifies all bus stops within 800m of your start location
+  </Step>
+  
+  <Step title="Generate possible routes">
+    It explores up to 10,000 possible route combinations through the bus network
+  </Step>
+  
+  <Step title="Evaluate distances">
+    Each route is scored based on total distance to the destination
+  </Step>
+  
+  <Step title="Return optimal route">
+    The shortest valid route that ends within 800m of your destination is returned
+  </Step>
+</Steps>
+
+## Available npm Scripts
+
+<CodeGroup>
+
+```bash Development
+# Start both client and server in dev mode
+npm start
+```
+
+```bash Build Only
+# Build production bundle
+npm run build
+```
+
+```bash Client Only
+# Watch and rebuild client code
+npm run dev
+```
+
+```bash Server Only
+# Start server with auto-restart
+npm run serverDev
+```
+
+```bash Server Production
+# Start server without auto-restart
+npm run server
+```
+
+</CodeGroup>
+
+## Common Issues
+
+### No routes found
+
+If you get "No hay rutas disponibles":
+
+1. **Start location too far** - Ensure your start is within 800m of a bus stop
+2. **Destination too far** - Ensure your destination is within 800m of a bus stop
+3. **No data loaded** - Verify the backend at `http://localhost:8000/branch` is returning bus stop data
+
+### Map not displaying
+
+<Warning>
+Verify your Google Maps API key is correctly configured in `public/index.html` and the Maps JavaScript API is enabled.
+</Warning>
+
+### Server not starting
+
+1. Check if port 8080 is available
+2. Ensure all dependencies are installed (`npm install`)
+3. Check console for error messages
+
+## Next Steps
+
+Now that you have React Route Finder running, you can:
+
+- Explore the source code to understand the algorithm
+- Customize the route-finding parameters in `src/server/FindLogic.js`
+- Integrate your own bus stop data source
+- Modify the UI components in `src/client/`
+- Add new features like favorite routes or route history
+
+<Info>
+The application is built with React 16.3.2 and uses class components. You can modernize it by converting to functional components with hooks.
+</Info>
+
+## Development Workflow
+
+### Making Changes
+
+1. **Client Changes** - Edit files in `src/client/`, Webpack auto-rebuilds
+2. **Server Changes** - Edit files in `src/server/`, Nodemon auto-restarts
+3. **Refresh Browser** - See your changes immediately
+
+### Example: Modify Walking Distance
+
+Edit `src/server/FindLogic.js`:
+
+```javascript
+// Change maximum walking distance from 800m to 1km
+const maxWalkKm = 1.0  // was 0.8
+```
+
+The server will automatically restart, and your next route search will use the new parameter.
+
+## Testing Your Routes
+
+Try these test cases to verify the application works correctly:
+
+1. **Short distance** - Set start and destination close together
+2. **Long distance** - Set points far apart requiring multiple transfers
+3. **Edge cases** - Try coordinates outside the bus network coverage
+
+Happy route finding!

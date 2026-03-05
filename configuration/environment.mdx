@@ -1,0 +1,260 @@
+---
+title: Environment Setup
+description: Configure your development environment for React Route Finder
+---
+
+## Overview
+
+React Route Finder uses Node.js and npm to manage dependencies and build processes. This guide covers the complete environment setup including dependencies, scripts, and backend configuration.
+
+## Dependencies
+
+### Core Dependencies
+
+The application requires the following core dependencies:
+
+<CodeGroup>
+
+```json package.json
+{
+  "dependencies": {
+    "babel-core": "^6.26.3",
+    "babel-loader": "^7.1.4",
+    "babel-preset-env": "^1.7.0",
+    "babel-preset-react": "^6.24.1",
+    "express": "^4.16.3",
+    "react": "^16.3.2",
+    "react-dom": "^16.3.2",
+    "webpack": "^4.8.3",
+    "webpack-cli": "^2.1.4"
+  }
+}
+```
+
+</CodeGroup>
+
+<Note>
+**React & React DOM**: Version 16.3.2 provides the UI framework for the application
+
+**Express**: Powers the backend server for route calculations and API endpoints
+
+**Webpack & Babel**: Handle code bundling and JSX/ES6 transpilation
+</Note>
+
+### Development Dependencies
+
+<CodeGroup>
+
+```json package.json
+{
+  "devDependencies": {
+    "concurrently": "^3.5.1",
+    "nodemon": "^1.12.1"
+  }
+}
+```
+
+</CodeGroup>
+
+- **concurrently**: Runs multiple npm scripts simultaneously (frontend + backend)
+- **nodemon**: Auto-restarts the server on file changes during development
+
+## Installation
+
+<Steps>
+  <Step title="Install Node.js">
+    Ensure you have Node.js installed (version 8.x or higher recommended for this setup)
+    
+    ```bash
+    node --version
+    npm --version
+    ```
+  </Step>
+  
+  <Step title="Install Dependencies">
+    Navigate to the project directory and install all dependencies:
+    
+    ```bash
+    npm install
+    ```
+    
+    This installs both production and development dependencies defined in package.json
+  </Step>
+  
+  <Step title="Verify Installation">
+    Check that all packages installed correctly:
+    
+    ```bash
+    npm list --depth=0
+    ```
+  </Step>
+</Steps>
+
+## NPM Scripts
+
+The project includes several npm scripts for different development and production workflows:
+
+### Development Scripts
+
+#### `npm run dev`
+
+Runs webpack in development mode with watch enabled:
+
+```bash
+npm run dev
+```
+
+- Uses webpack development mode (`-d` flag)
+- Watches for file changes and auto-rebuilds
+- Generates source maps for easier debugging
+- Output files are written to the `public/` directory
+
+#### `npm run serverDev`
+
+Starts the Express server with auto-restart on changes:
+
+```bash
+npm run serverDev
+```
+
+- Uses nodemon to watch server files
+- Automatically restarts when server code changes
+- Listens on port 8080 by default
+
+#### `npm start`
+
+The complete development workflow that runs both webpack and server concurrently:
+
+```bash
+npm start
+```
+
+This command executes both `npm run dev` and `npm run serverDev` simultaneously using concurrently. This is the recommended command for active development.
+
+<Note>
+The `--kill-others` flag ensures that if one process fails, all processes are terminated. This prevents orphaned processes.
+</Note>
+
+### Production Scripts
+
+#### `npm run build`
+
+Creates an optimized production build:
+
+```bash
+npm run build
+```
+
+- Uses webpack production mode (`-p` flag)
+- Minifies and optimizes JavaScript code
+- Generates optimized bundles in the `public/` directory
+- No source maps (smaller file sizes)
+
+#### `npm run server`
+
+Runs the Express server in production mode:
+
+```bash
+npm run server
+```
+
+Use this after building with `npm run build` to serve the production application.
+
+## Server Configuration
+
+### Port Configuration
+
+The Express server runs on **port 8080** by default. To change this, modify `src/server/server.js`:
+
+<CodeGroup>
+
+```javascript src/server/server.js
+app.listen(8080, () => {
+    console.log("Server UP!")
+})
+```
+
+</CodeGroup>
+
+### Backend URL Configuration
+
+The application uses `ServerMockup` to simulate backend data. In production, you'll need to replace this with actual API calls.
+
+<Steps>
+  <Step title="Locate the ServerMockup Import">
+    Find this line in `src/server/server.js`:
+    
+    ```javascript
+    const ServerMockup = require("./ServerMockup")
+    ```
+  </Step>
+  
+  <Step title="Replace with Real API">
+    Replace the ServerMockup calls with your actual backend service:
+    
+    ```javascript
+    // Before (Development)
+    ServerMockup()
+        .then(busStopsData => resp.json(busStopsData))
+    
+    // After (Production)
+    fetch('https://your-backend-api.com/routes')
+        .then(response => response.json())
+        .then(busStopsData => resp.json(busStopsData))
+    ```
+  </Step>
+  
+  <Step title="Configure Environment Variables">
+    Use environment variables for the backend URL:
+    
+    ```javascript
+    const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8080'
+    ```
+  </Step>
+</Steps>
+
+<Warning>
+Remember to update both `/allRoutes` and `/route` endpoints when switching from ServerMockup to a real backend service.
+</Warning>
+
+## API Endpoints
+
+The Express server exposes the following endpoints:
+
+- **GET /allRoutes**: Returns all available bus routes and stops
+- **POST /route**: Calculates the optimal route based on origin and destination
+
+These endpoints are consumed by the React frontend to display route information.
+
+## Troubleshooting
+
+### Port Already in Use
+
+If port 8080 is already in use:
+
+```bash
+# Find the process using port 8080
+lsof -i :8080
+
+# Kill the process or change the port in server.js
+```
+
+### Module Not Found Errors
+
+If you encounter module errors after installation:
+
+```bash
+# Clear npm cache and reinstall
+rm -rf node_modules package-lock.json
+npm install
+```
+
+### Webpack Build Failures
+
+Check that all peer dependencies are satisfied:
+
+```bash
+npm ls
+```
+
+Look for any unmet peer dependency warnings and install missing packages.

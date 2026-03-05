@@ -1,0 +1,327 @@
+---
+title: 'Frontend Architecture'
+description: 'Deep dive into the React component structure and client-side implementation'
+---
+
+## Component Hierarchy
+
+The React application follows a simple, hierarchical component structure:
+
+```
+App (Root Component)
+├── RouteForm
+│   └── LatLongFields (x2)
+└── Result
+```
+
+## Root Component: App
+
+The `App` component serves as the central hub for state management and coordination between child components.
+
+### State Management
+
+Located in `src/client/index.jsx:13`:
+
+```javascript
+this.state = { route: {} }
+```
+
+The App component maintains a single state property:
+- `route` - Object containing the calculated route data (array of stops)
+
+<Note>
+  The application uses React class components with local state management. No external state management libraries (Redux, MobX) are used.
+</Note>
+
+### Key Methods
+
+<Accordion title="findRoute(routeData)">
+
+**Purpose**: Sends route request to backend and updates state with response
+
+**Location**: `src/client/index.jsx:53-67`
+
+```javascript
+findRoute(routeData) {
+    fetch("/route", {
+        method: "POST",
+        headers: {
+            "content-type": "application/json"
+        },
+        body: JSON.stringify(routeData)
+    }).then(resp => resp.json())
+        .then(route => {
+            this.setState({ route })
+            this.updateMarkers(route)
+        })
+        .catch(error => console.error(error.response.data))
+}
+```
+
+**Flow**:
+1. Makes POST request to `/route` endpoint
+2. Sends `routeData` containing `from` and `to` coordinates
+3. Updates state with response
+4. Triggers map marker update
+</Accordion>
+
+<Accordion title="updateMarkers(stops)">
+
+**Purpose**: Visualizes the route on Google Maps
+
+**Location**: `src/client/index.jsx:18-51`
+
+```javascript
+updateMarkers(stops){
+    this.markers.forEach(m=> m.setMap(null))
+    this.markers = []
+    const points = stops.map( s => ({
+        lat: s.latitude,
+        lng: s.longitude, 
+        id: s.id, 
+        title: s.name
+    }))
+    points.forEach( p => {    
+        const marker = new google.maps.Marker({
+            position: p,
+            map: map,
+            draggable: false,
+            label: "" + p.id,
+            title: "" + p.title
+        })
+        this.markers.push(marker)
+    })
+    
+    const waypoints = points.slice(1, -1).map( 
+        p => ({ location: p, stopover: false})
+    )
+
+    directionsService.route({
+        origin: points[0],
+        destination: points[points.length - 1],
+        waypoints: waypoints,
+        optimizeWaypoints: true,
+        travelMode: 'DRIVING'
+    }, function(response, status) {
+        if (status === 'OK') {
+            directionsDisplay.setDirections(response)
+            directionsDisplay.setOptions({
+                suppressMarkers: true
+            });
+        } else {
+            console.error(response)
+        }
+    })
+}
+```
+
+**Flow**:
+1. Clears existing markers from map
+2. Creates new markers for each stop
+3. Configures waypoints for Google Directions API
+4. Renders optimized route on map
+</Accordion>
+
+## RouteForm Component
+
+Manages user input for origin and destination coordinates.
+
+**Location**: `src/client/RouteForm.jsx`
+
+### State Structure
+
+```javascript
+this.state = {
+    from: { lat: -34.55931882107318, lng: -58.456907455139174 },
+    to: { lat: -34.58049629262017, lng: -58.45130747926478 }
+}
+```
+
+<Tip>
+  Default coordinates are pre-populated with locations in Buenos Aires, Argentina for testing purposes.
+</Tip>
+
+### Component Interface
+
+```javascript
+<RouterForm onFind={this.findRoute} />
+```
+
+**Props**:
+- `onFind` - Callback function invoked when user clicks "Buscar ruta" button
+
+### Change Handler
+
+The `onChange` method updates nested state immutably:
+
+```javascript
+onChange(id, field, value){
+    this.setState( prevState => {
+        const newField = Object.assign({}, prevState[id], {[field]: value})
+        return Object.assign({}, prevState, {[id]: newField})
+    })
+}
+```
+
+This pattern ensures React detects state changes properly.
+
+## Result Component
+
+Displays the calculated route as a human-readable list of instructions.
+
+**Location**: `src/client/Result.jsx`
+
+### Route Beautification
+
+Before display, the component simplifies the route by removing intermediate stops on the same branch:
+
+```javascript
+function beautifyRoute(points){
+    return points.reduce((route, point) => {
+        const resp = route.concat(point)
+        
+        if(resp.length < 3){
+            return resp
+        }
+
+        // Remove middle stop if all 3 consecutive stops are on same branch
+        if(resp[resp.length - 2].branch_id === resp[resp.length - 1].branch_id &&
+           resp[resp.length - 3].branch_id === resp[resp.length - 2].branch_id){
+            resp.splice(resp.length - 2, 1)
+            return resp
+        }
+        return resp
+    }, [])
+}
+```
+
+<Info>
+  This algorithm condenses routes like "Stop A → Stop B → Stop C" (all same branch) into "Stop A → Stop C" for better readability.
+</Info>
+
+### Display Logic
+
+```javascript
+const route = beautifyRoute(props.route)
+const lis = route.map((point, i) => {
+    const action = i % 2 == 0 ? "Caminar hasta " : "Bajarse en " 
+    const label = point.name + " del ramal #" + point.branch_id
+    return <li key={i}>{action + label}</li>
+})
+return <ul>{lis}</ul>
+```
+
+Alternates between "Walk to" and "Get off at" instructions.
+
+## Google Maps Integration
+
+Google Maps is initialized globally in `index.jsx:82-93`:
+
+```javascript
+var directionsDisplay = new google.maps.DirectionsRenderer;
+var directionsService = new google.maps.DirectionsService;
+
+var bsas = { lat: -34.6037, lng: -58.3816 };
+
+var map = new google.maps.Map(document.getElementById('map'), {
+    zoom: 12,
+    center: bsas
+})
+directionsDisplay.setMap(map);
+```
+
+<Note>
+  The map is initialized in the global scope rather than within the React component. In a production application, consider integrating this more tightly with React lifecycle methods.
+</Note>
+
+### Google Maps APIs Used
+
+1. **Maps JavaScript API** - Core map rendering
+2. **Directions API** - Route polyline rendering
+3. **Markers API** - Bus stop visualization
+
+## Component Communication Pattern
+
+The application uses a **props-down, events-up** pattern:
+
+<Steps>
+  <Step title="Props Down">
+    Parent components pass data and callbacks to children via props
+  </Step>
+  
+  <Step title="Events Up">
+    Child components invoke parent callbacks to notify of state changes
+  </Step>
+</Steps>
+
+**Example Flow**:
+```
+User enters coordinates
+    ↓
+RouteForm updates local state
+    ↓
+User clicks "Buscar ruta"
+    ↓
+RouteForm calls props.onFind(this.state)
+    ↓
+App.findRoute() executes
+    ↓
+App updates state with route
+    ↓
+Result receives updated props.route
+    ↓
+Result re-renders with new route
+```
+
+## Build Configuration
+
+The Webpack configuration bundles the React application:
+
+**Entry Point**: `src/client/index.jsx`  
+**Output**: `public/main.js` and `public/vendors.js`
+
+```javascript
+// webpack.config.js:18-27
+optimization: {
+    splitChunks: {
+        cacheGroups: {
+            commons: {
+                test: /[\\/]node_modules[\\/]/,
+                name: "vendors",
+                chunks: "all"
+            }
+        }
+    }
+}
+```
+
+<Tip>
+  Vendor code is split into a separate bundle for better caching. React and other dependencies are loaded from `vendors.js` while application code is in `main.js`.
+</Tip>
+
+## Key Design Decisions
+
+### Why Class Components?
+
+The application uses class components instead of hooks:
+- Written before React Hooks were widely adopted
+- State management needs are simple
+- No need for complex side effects
+
+### Global Map Instance
+
+Google Maps objects are global variables:
+- Simpler integration with external library
+- Avoids React ref complexity
+- Trade-off: harder to test and less idiomatic React
+
+### Minimal State Management
+
+Only the route is stored in React state:
+- Form state is local to RouteForm
+- Map state is managed by Google Maps
+- Reduces complexity for this small application
+
+<Info>
+  For a larger application, consider using React Context or a state management library to avoid prop drilling.
+</Info>

@@ -1,0 +1,585 @@
+---
+title: 'Route Finding Algorithm'
+description: 'Deep dive into the pathfinding algorithm and its implementation'
+---
+
+## Algorithm Overview
+
+The route-finding algorithm in `FindLogic.js` implements a custom pathfinding solution to find the optimal bus route between two geographic points. It uses a breadth-first search approach with distance-based optimization.
+
+**Location**: `src/server/FindLogic.js`
+
+## Core Classes
+
+### Point Class
+
+Represents a geographic location with latitude and longitude coordinates.
+
+**Location**: `src/server/FindLogic.js:2-23`
+
+```javascript
+class Point {
+    constructor(latitude, longitude) {
+        this.latitude = latitude
+        this.longitude = longitude
+    }
+
+    distance(point) {
+        const R = 6371; // Radius of the earth in km
+        const dLat = (point.latitude - this.latitude) * (Math.PI/180)
+        const dLon = (point.longitude - this.longitude) * (Math.PI/180) 
+        const a = 
+            Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(this.latitude * (Math.PI/180)) * 
+            Math.cos(point.latitude * (Math.PI/180)) * 
+            Math.sin(dLon/2) * Math.sin(dLon/2)
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))
+        const d = R * c // Distance in km
+        return d
+    }
+}
+```
+
+#### Haversine Formula
+
+The `distance()` method implements the **Haversine formula** to calculate great-circle distance between two points on Earth.
+
+<Accordion title="Haversine Formula Explanation">
+
+The formula calculates the shortest distance over Earth's surface:
+
+1. **Convert to radians**: Multiply degrees by π/180
+2. **Calculate differences**: `dLat` and `dLon`
+3. **Apply Haversine**: 
+   ```
+   a = sin²(dLat/2) + cos(lat1) × cos(lat2) × sin²(dLon/2)
+   ```
+4. **Calculate angular distance**: 
+   ```
+   c = 2 × atan2(√a, √(1-a))
+   ```
+5. **Convert to kilometers**: `distance = R × c` where R = 6371 km
+
+<Info>
+  The Haversine formula assumes Earth is a perfect sphere. For more accuracy, consider using the Vincenty formula which accounts for Earth's ellipsoid shape.
+</Info>
+
+</Accordion>
+
+### Stop Class
+
+Extends `Point` with bus stop specific properties.
+
+**Location**: `src/server/FindLogic.js:25-32`
+
+```javascript
+class Stop extends Point {
+    constructor(data) {
+        super(data.latitude, data.longitude)
+        this.id = data.id
+        this.branch_id = data.branch_id
+        this.name = data.name
+    }
+}
+```
+
+**Properties**:
+- `id` - Unique stop identifier
+- `branch_id` - Bus line/branch identifier
+- `name` - Human-readable stop name
+- `latitude` / `longitude` - Geographic coordinates (inherited)
+
+### Route Class
+
+Represents a sequence of stops forming a potential route.
+
+**Location**: `src/server/FindLogic.js:82-120`
+
+```javascript
+class Route {
+    constructor(points) {
+        this.p = points
+    }
+
+    isValid() {
+        // Check for duplicate stops
+        for(let i = 0; i < this.p.length - 1; i++) {
+            for(let j = i + 1; j < this.p.length; j++) {
+                if(this.p[i].id != null && this.p[j].id != null && 
+                   this.p[i].id == this.p[j].id)
+                    return false
+            }
+        }
+        return true
+    }
+
+    isEqual(otherRoute) {
+        if(this.p.length !== otherRoute.p.length)
+            return false
+        for(let i = 0; i < otherRoute.p.length; i++) {
+            if(otherRoute.p[i].id != null && this.p[i].id != null && 
+               otherRoute.p[i].id != this.p[i].id)
+                return false
+        }
+        return true
+    }
+
+    distance(destination) {
+        const lastPoint = this.p[this.p.length - 1]
+        return lastPoint.distance(destination)
+    }
+
+    getNexRoutes() {
+        const lastPoint = this.p[this.p.length - 1]
+        const nextStops = posiblesNextStops(lastPoint)
+        return nextStops.map(s => new Route(this.p.concat(s)))
+                        .filter(r => r.isValid())
+    }
+}
+```
+
+#### Key Methods
+
+<Accordion title="isValid()">
+
+**Purpose**: Ensures the route doesn't visit the same stop twice
+
+**Logic**: 
+- Compares all pairs of stops
+- Returns `false` if any duplicate IDs found
+- Prevents circular routes
+
+**Time Complexity**: O(n²) where n is number of stops
+
+</Accordion>
+
+<Accordion title="isEqual(otherRoute)">
+
+**Purpose**: Checks if two routes are identical
+
+**Logic**:
+- Compares lengths first (fast rejection)
+- Compares stop IDs in sequence
+- Used to deduplicate routes
+
+</Accordion>
+
+<Accordion title="distance(destination)">
+
+**Purpose**: Calculates distance from route's end to destination
+
+**Usage**: For sorting routes by proximity to destination
+
+</Accordion>
+
+<Accordion title="getNextRoutes()">
+
+**Purpose**: Generates all valid route extensions from current route
+
+**Logic**:
+1. Gets possible next stops from last point
+2. Creates new routes by appending each stop
+3. Filters out invalid routes (with duplicates)
+
+This is the core of the search space expansion.
+
+</Accordion>
+
+## Algorithm Configuration
+
+```javascript
+// src/server/FindLogic.js:34-38
+const walkKmh = 1        // Walking speed: 1 km/h
+const busKmh = 60        // Bus speed: 60 km/h
+const busWaitH = 0.5     // Bus wait time: 0.5 hours
+const maxWalkKm = 0.8    // Max walking distance: 0.8 km
+```
+
+These constants define travel constraints:
+
+| Parameter | Value | Purpose |
+|-----------|-------|---------|
+| `walkKmh` | 1 km/h | Walking speed (conservative estimate) |
+| `busKmh` | 60 km/h | Average bus speed |
+| `busWaitH` | 0.5 hours | Expected wait time for bus |
+| `maxWalkKm` | 0.8 km | Maximum walking distance to/from stops |
+
+<Tip>
+  These values can be tuned based on real-world data. For example, walking speed is typically 4-5 km/h, suggesting room for optimization.
+</Tip>
+
+## Helper Functions
+
+### getCloseStops(from)
+
+Finds all stops within walking distance of a point.
+
+**Location**: `src/server/FindLogic.js:70-73`
+
+```javascript
+function getCloseStops(from) {
+    return allStops.filter(stop => from.distance(stop) <= maxWalkKm)
+}
+```
+
+**Purpose**: Identifies reachable stops for:
+- Starting the journey
+- Transferring between lines
+- Ending the journey
+
+### getNextStop(point)
+
+Gets the next stop on the same bus line.
+
+**Location**: `src/server/FindLogic.js:57-68`
+
+```javascript
+function getNextStop(point) {
+    if(!point instanceof Stop) {
+        return null
+    }
+    const stopIndx = allStops.findIndex(s => point.id === s.id)
+    if(allStops.length - 1 === stopIndx) {
+        return null
+    } else if(allStops[stopIndx + 1].branch_id !== point.branch_id) {
+        return null
+    } 
+    return allStops[stopIndx + 1]
+}
+```
+
+**Logic**:
+1. Find current stop index in `allStops` array
+2. Return `null` if at end of array
+3. Return `null` if next stop is on different branch
+4. Otherwise return next stop
+
+<Note>
+  This assumes stops are ordered sequentially in the `allStops` array. The data structure depends on proper ordering from the backend.
+</Note>
+
+### posiblesNextStops(stop)
+
+Combines sequential and transfer possibilities.
+
+**Location**: `src/server/FindLogic.js:75-79`
+
+```javascript
+function posiblesNextStops(stop) {
+    const ns = getNextStop(stop)
+    const closestStops = getCloseStops(stop)
+    return closestStops.concat(ns ? ns : [])
+}
+```
+
+Returns:
+- All stops within walking distance (for transfers)
+- Next stop on same line (for staying on bus)
+
+## Main Algorithm: findRoute()
+
+The core pathfinding function that implements a modified breadth-first search.
+
+**Location**: `src/server/FindLogic.js:42-161`
+
+### Algorithm Steps
+
+<Steps>
+  <Step title="Initialize Data">
+    Parse input coordinates and flatten all stops into a single array
+    
+    ```javascript
+    const allStops = busStopsData
+        .reduce((stops, branch) => stops.concat(branch.stops), [])
+        .map(s => new Stop(s))
+    
+    const start = new Point(
+        parseFloat(routeData.from.lat),
+        parseFloat(routeData.from.lng)
+    )
+    const destination = new Point(
+        parseFloat(routeData.to.lat),
+        parseFloat(routeData.to.lng)
+    )
+    ```
+  </Step>
+
+  <Step title="Find Starting Stops">
+    Identify all stops within walking distance of origin
+    
+    ```javascript
+    const firstStops = getCloseStops(start)
+    if(firstStops.length < 1) {
+        throw new Error("No existen paradas para empezar")
+    }
+    ```
+  </Step>
+
+  <Step title="Initialize Route List">
+    Create initial routes (one stop each)
+    
+    ```javascript
+    let allRoutes = firstStops.map(s => new Route([s]))
+    ```
+  </Step>
+
+  <Step title="Iterative Expansion">
+    Expand routes until destination is reachable
+    
+    ```javascript
+    const maxRoutes = 10000
+    let go = true
+    let maxCount = 50
+    
+    while (go) {
+        // Generate next generation of routes
+        const nextRoutes = allRoutes.map(r => r.getNexRoutes())
+                                    .filter(r => r.length)
+        
+        if(nextRoutes.length === 0 || maxCount === 0) {
+            go = false
+        } else {
+            nextRoutes.forEach((routes) => {
+                routes.forEach((r) => allRoutes.push(r))
+            })
+        }
+        
+        maxCount--
+        
+        // Deduplicate routes
+        allRoutes = allRoutes.filter((r1, i, self) => 
+            self.findIndex(r2 => r2.isEqual(r1)) === i
+        )
+        
+        // Sort by distance to destination
+        allRoutes.sort((r1, r2) => 
+            r1.distance(destination) - r2.distance(destination)
+        )
+        
+        // Stop if closest route is within walking distance
+        if(allRoutes[0].distance(destination) < walkKmh) {
+            go = false
+        }
+        
+        // Limit route count for performance
+        allRoutes = allRoutes.slice(0, maxRoutes)
+    }
+    ```
+  </Step>
+
+  <Step title="Select Best Route">
+    Find valid routes and return the shortest
+    
+    ```javascript
+    validRoutes = allRoutes.filter(r => 
+        r.distance(destination) < maxWalkKm
+    )
+    
+    if(validRoutes.length) {
+        return validRoutes[0].p
+    }
+    
+    throw new Error("No hay rutas disponibles")
+    ```
+  </Step>
+</Steps>
+
+## Algorithm Characteristics
+
+### Search Strategy
+
+The algorithm uses a **greedy best-first search** approach:
+- Explores all routes in parallel
+- Sorts by distance to destination
+- Keeps only the most promising routes
+- Continues until destination is reachable
+
+### Termination Conditions
+
+The search stops when:
+1. **Success**: Closest route is within walking distance of destination
+2. **Failure**: No new routes can be generated
+3. **Timeout**: 50 iterations reached (`maxCount`)
+
+### Performance Optimizations
+
+<Accordion title="Route Limit (10,000)">
+
+```javascript
+const maxRoutes = 10000
+allRoutes = allRoutes.slice(0, maxRoutes)
+```
+
+**Purpose**: Prevents memory exhaustion in complex scenarios
+
+**Trade-off**: May miss optimal route if more than 10,000 possibilities exist
+
+</Accordion>
+
+<Accordion title="Iteration Limit (50)">
+
+```javascript
+let maxCount = 50
+```
+
+**Purpose**: Prevents infinite loops
+
+**Trade-off**: May fail to find routes requiring many transfers
+
+</Accordion>
+
+<Accordion title="Route Deduplication">
+
+```javascript
+allRoutes = allRoutes.filter((r1, i, self) => 
+    self.findIndex(r2 => r2.isEqual(r1)) === i
+)
+```
+
+**Purpose**: Removes duplicate routes to reduce search space
+
+**Impact**: O(n²) operation that can be expensive with many routes
+
+</Accordion>
+
+<Accordion title="Early Termination">
+
+```javascript
+if(allRoutes[0].distance(destination) < walkKmh) {
+    go = false
+}
+```
+
+**Purpose**: Stops as soon as destination is reachable
+
+**Note**: Uses `walkKmh` (1 km) instead of `maxWalkKm` (0.8 km) - potential bug?
+
+</Accordion>
+
+## Algorithm Complexity
+
+### Time Complexity
+
+- **Best Case**: O(n) - Direct route found immediately
+- **Average Case**: O(n × m × k) where:
+  - n = number of stops
+  - m = average branches per stop
+  - k = iterations (max 50)
+- **Worst Case**: O(n² × k) with deduplication overhead
+
+### Space Complexity
+
+- **Route Storage**: O(maxRoutes × avgRouteLength)
+- **Maximum**: ~10,000 routes × ~10 stops = 100,000 Stop objects
+
+<Info>
+  For large cities with thousands of stops, this algorithm may struggle. Consider implementing A* or Dijkstra's algorithm for better scalability.
+</Info>
+
+## Algorithm Limitations
+
+### Current Issues
+
+1. **No Cost Function**: Doesn't optimize for travel time
+2. **Fixed Parameters**: Walk/wait times are constants
+3. **Sequential Stop Assumption**: Relies on stops being ordered
+4. **No Transfer Penalty**: Doesn't discourage excessive transfers
+5. **Greedy Approach**: May miss optimal solution
+
+### Potential Improvements
+
+<Accordion title="Implement A* Algorithm">
+
+Replace greedy search with A* for guaranteed optimal path:
+
+```javascript
+function heuristic(stop, destination) {
+    return stop.distance(destination) / busKmh
+}
+
+function cost(route) {
+    let time = 0
+    for(let i = 0; i < route.p.length - 1; i++) {
+        const d = route.p[i].distance(route.p[i + 1])
+        const sameRoute = route.p[i].branch_id === route.p[i + 1].branch_id
+        time += sameRoute ? (d / busKmh) : (d / walkKmh + busWaitH)
+    }
+    return time
+}
+```
+
+</Accordion>
+
+<Accordion title="Add Transfer Penalty">
+
+Discourage excessive transfers:
+
+```javascript
+function routeScore(route) {
+    const transfers = route.p.reduce((count, stop, i) => {
+        if(i === 0) return 0
+        return count + (stop.branch_id !== route.p[i-1].branch_id ? 1 : 0)
+    }, 0)
+    
+    return route.distance(destination) + (transfers * transferPenalty)
+}
+```
+
+</Accordion>
+
+<Accordion title="Optimize Deduplication">
+
+Use Set for O(1) lookup instead of O(n) filter:
+
+```javascript
+const seen = new Set()
+allRoutes = allRoutes.filter(route => {
+    const key = route.p.map(p => p.id).join('-')
+    if(seen.has(key)) return false
+    seen.add(key)
+    return true
+})
+```
+
+</Accordion>
+
+## Example Route Calculation
+
+Let's trace through a simple example:
+
+**Input**:
+- Start: (-34.5593, -58.4569)
+- Destination: (-34.5805, -58.4513)
+
+**Execution**:
+
+1. **Find Starting Stops**: 3 stops within 0.8km of start
+2. **Initial Routes**: `[Route([Stop1]), Route([Stop2]), Route([Stop3])]`
+3. **Iteration 1**: Each route generates 2-4 extensions → 10 total routes
+4. **Sort by Distance**: Routes closest to destination first
+5. **Iteration 2**: Top 10 routes expanded → 30 total routes
+6. **Deduplication**: 5 duplicates removed → 25 routes
+7. **Check Termination**: Closest route 0.5km from destination
+8. **Stop**: Destination within walking distance
+9. **Return**: `[Stop2, Stop7, Stop15, Stop22]`
+
+## Testing Considerations
+
+Key test cases for the algorithm:
+
+- Direct route (start and end on same bus line)
+- Single transfer required
+- Multiple transfers required
+- No route available (isolated locations)
+- Very close start/end points
+- Maximum walking distance edge cases
+
+<Tip>
+  The algorithm is deterministic given the same input. Unit tests should verify both successful routes and proper error handling.
+</Tip>
+
+## Next Steps
+
+Explore related architecture:
+- [Backend Architecture](/architecture/backend) - How the algorithm is invoked
+- [Frontend Architecture](/architecture/frontend) - How routes are displayed

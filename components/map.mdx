@@ -1,0 +1,201 @@
+---
+title: 'Map Component'
+description: 'Google Maps integration component with interactive marker placement'
+---
+
+## Overview
+
+The `Map` component provides an interactive Google Maps interface that allows users to select coordinates by clicking on the map. It manages map initialization, marker rendering, and click event handling.
+
+## Props
+
+<ParamField path="selectMapPoint" type="function" required>
+  Callback function invoked when the user clicks on the map. Receives a coordinate object with `lat` and `lng` properties.
+</ParamField>
+
+<ParamField path="markers" type="array">
+  Array of marker objects to display on the map. Currently used for component update optimization.
+</ParamField>
+
+## Instance Variables
+
+<ResponseField name="map" type="google.maps.Map">
+  The Google Maps instance created during component initialization
+</ResponseField>
+
+<ResponseField name="markers" type="array">
+  Array to store Google Maps marker instances (initialized as empty array)
+</ResponseField>
+
+## Methods
+
+### showMap
+
+Initializes the Google Maps instance when the component mounts. This method is called via a ref callback.
+
+<ParamField path="elm" type="HTMLElement" required>
+  The DOM element that will contain the map
+</ParamField>
+
+```jsx
+showMap(elm){
+    this.map = new google.maps.Map(elm, {
+        zoom: 12,
+        center: {lat: -34.6037, lng: -58.3816} // Buenos Aires
+    })
+    this.map.addListener("click", (event) => {
+        const coords = event.latLng
+        this.props.selectMapPoint({lat: coords.lat(), lng: coords.lng()})
+    })
+}
+```
+
+**Initialization:**
+1. Creates a new Google Maps instance in the provided DOM element
+2. Sets initial zoom level to 12
+3. Centers the map on Buenos Aires (-34.6037, -58.3816)
+4. Adds click event listener to capture user-selected coordinates
+
+**Click Event:**
+- When user clicks the map, extracts latitude and longitude
+- Converts Google Maps LatLng object to plain coordinate object
+- Calls the `selectMapPoint` callback with the coordinates
+
+### shouldComponentUpdate
+
+Prevents unnecessary re-renders of the map component.
+
+```jsx
+shouldComponentUpdate(nextProps, nextState) {
+    nextProps.markers.forEach( marker => {
+        // Marker update logic (currently empty)
+    })
+    return false;
+}
+```
+
+**Behavior:**
+- Always returns `false` to prevent re-renders
+- The map is managed imperatively rather than declaratively
+- Markers would be updated in this lifecycle method (implementation pending)
+
+## Render Method
+
+```jsx
+render(){
+    return <div 
+        style={{height: 500, width: 500}} 
+        ref={elm => this.showMap(elm)}
+    ></div>
+}
+```
+
+**Rendering:**
+- Creates a 500x500 pixel container div
+- Uses ref callback to initialize the map when the element is mounted
+- Inline styles set the map dimensions
+
+## Creating Markers
+
+While the Map component manages the container, markers are typically created externally. Here's how markers are created in the application:
+
+```jsx
+const marker = new google.maps.Marker({
+    position: {lat: -34.6037, lng: -58.3816},
+    map: map,
+    draggable: false,
+    label: "1",
+    title: "Location Name"
+})
+```
+
+<ParamField path="position" type="object" required>
+  Coordinate object with `lat` and `lng` properties
+</ParamField>
+
+<ParamField path="map" type="google.maps.Map" required>
+  The map instance to display the marker on
+</ParamField>
+
+<ParamField path="draggable" type="boolean">
+  Whether the marker can be dragged. Typically `false` for route stops.
+</ParamField>
+
+<ParamField path="label" type="string">
+  Text label displayed on the marker
+</ParamField>
+
+<ParamField path="title" type="string">
+  Tooltip text shown on marker hover
+</ParamField>
+
+## Directions Service Integration
+
+The application uses Google Maps Directions Service for route calculation. This is typically handled by the parent App component:
+
+```jsx
+const waypoints = points.slice(1, -1).map(p => ({ 
+    location: p, 
+    stopover: false 
+}))
+
+directionsService.route({
+    origin: points[0],
+    destination: points[points.length - 1],
+    waypoints: waypoints,
+    optimizeWaypoints: true,
+    travelMode: 'DRIVING'
+}, function(response, status) {
+    if (status === 'OK') {
+        directionsDisplay.setDirections(response)
+        directionsDisplay.setOptions({
+            suppressMarkers: true
+        })
+    }
+})
+```
+
+**Configuration:**
+- **origin**: First point in the route
+- **destination**: Last point in the route
+- **waypoints**: All intermediate points (not including first and last)
+- **optimizeWaypoints**: `true` - Google Maps optimizes the order
+- **travelMode**: `'DRIVING'` - Calculates driving directions
+- **suppressMarkers**: `true` - Uses custom markers instead of defaults
+
+## Usage Example
+
+```jsx
+import Map from './Map';
+
+function MapContainer() {
+    const handlePointSelection = (coords) => {
+        console.log('Selected coordinates:', coords);
+        // coords = { lat: -34.6037, lng: -58.3816 }
+    };
+    
+    return (
+        <Map 
+            selectMapPoint={handlePointSelection}
+            markers={[]}
+        />
+    );
+}
+```
+
+## Map Styling
+
+The map container is rendered with fixed dimensions:
+
+```css
+{
+    height: 500px,
+    width: 500px
+}
+```
+
+For responsive layouts, you may want to adjust these dimensions based on viewport size or use percentage-based sizing.
+
+## File Location
+
+`src/client/Map.jsx`

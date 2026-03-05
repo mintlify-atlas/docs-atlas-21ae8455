@@ -1,0 +1,471 @@
+---
+title: 'Find Route'
+description: 'Calculate the optimal route between two geographic coordinates'
+api: 'POST http://localhost:8080/route'
+---
+
+## Overview
+
+The `/route` endpoint calculates the optimal path between two geographic coordinates using the available bus routes and walking connections. The algorithm considers walking distance, bus routes, and transfers to find the best route.
+
+## Endpoint
+
+```
+POST /route
+```
+
+## Request
+
+Send a JSON payload with origin and destination coordinates.
+
+### Headers
+
+<ParamField header="Content-Type" type="string" required>
+  Must be `application/json`
+</ParamField>
+
+### Body Parameters
+
+<ParamField body="from" type="object" required>
+  Origin coordinates
+  
+  <Expandable title="from properties">
+    <ParamField body="lat" type="number" required>
+      Latitude of the starting point (e.g., `40.7128`)
+    </ParamField>
+    
+    <ParamField body="lng" type="number" required>
+      Longitude of the starting point (e.g., `-74.0060`)
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField body="to" type="object" required>
+  Destination coordinates
+  
+  <Expandable title="to properties">
+    <ParamField body="lat" type="number" required>
+      Latitude of the destination point
+    </ParamField>
+    
+    <ParamField body="lng" type="number" required>
+      Longitude of the destination point
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+### Request Example
+
+```json
+{
+  "from": {
+    "lat": 40.7128,
+    "lng": -74.0060
+  },
+  "to": {
+    "lat": 40.7580,
+    "lng": -73.9855
+  }
+}
+```
+
+## Response
+
+The endpoint returns an array of stops representing the optimal route from origin to destination.
+
+<ResponseField name="route" type="array" required>
+  Array of stop objects representing the path to take
+  
+  <Expandable title="Stop Object Properties">
+    <ResponseField name="id" type="number" required>
+      Unique identifier for the bus stop
+    </ResponseField>
+    
+    <ResponseField name="branch_id" type="number" required>
+      ID of the bus route this stop belongs to
+    </ResponseField>
+    
+    <ResponseField name="name" type="string" required>
+      Name of the bus stop
+    </ResponseField>
+    
+    <ResponseField name="latitude" type="number" required>
+      Geographic latitude coordinate
+    </ResponseField>
+    
+    <ResponseField name="longitude" type="number" required>
+      Geographic longitude coordinate
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Success Response Example
+
+```json
+[
+  {
+    "id": 15,
+    "branch_id": 2,
+    "name": "Washington Square",
+    "latitude": 40.7308,
+    "longitude": -73.9973
+  },
+  {
+    "id": 16,
+    "branch_id": 2,
+    "name": "Union Square",
+    "latitude": 40.7359,
+    "longitude": -73.9911
+  },
+  {
+    "id": 23,
+    "branch_id": 3,
+    "name": "Grand Central",
+    "latitude": 40.7527,
+    "longitude": -73.9772
+  }
+]
+```
+
+### Error Responses
+
+If no route can be found or an error occurs:
+
+```json
+{
+  "error": "No hay rutas disponibles"
+}
+```
+
+Common error messages:
+
+| Error Message | Meaning |
+|---------------|---------|
+| `"No existen paradas para empezar"` | No bus stops within walking distance of origin |
+| `"No hay rutas disponibles"` | No valid route found between the coordinates |
+| `"Error message from service"` | External service error |
+
+## Code Examples
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST http://localhost:8080/route \
+  -H "Content-Type: application/json" \
+  -d '{
+    "from": {
+      "lat": 40.7128,
+      "lng": -74.0060
+    },
+    "to": {
+      "lat": 40.7580,
+      "lng": -73.9855
+    }
+  }'
+```
+
+```javascript JavaScript Fetch
+async function findRoute(fromLat, fromLng, toLat, toLng) {
+  try {
+    const response = await fetch('http://localhost:8080/route', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        from: { lat: fromLat, lng: fromLng },
+        to: { lat: toLat, lng: toLng }
+      })
+    });
+    
+    const route = await response.json();
+    
+    if (route.error) {
+      console.error('Route error:', route.error);
+      return null;
+    }
+    
+    console.log(`Route found with ${route.length} stops`);
+    return route;
+  } catch (error) {
+    console.error('Network error:', error);
+    return null;
+  }
+}
+
+// Usage
+const route = await findRoute(40.7128, -74.0060, 40.7580, -73.9855);
+if (route) {
+  console.log('First stop:', route[0].name);
+  console.log('Last stop:', route[route.length - 1].name);
+}
+```
+
+```javascript JavaScript Promise
+const routeData = {
+  from: { lat: 40.7128, lng: -74.0060 },
+  to: { lat: 40.7580, lng: -73.9855 }
+};
+
+fetch('http://localhost:8080/route', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(routeData)
+})
+  .then(response => response.json())
+  .then(route => {
+    if (route.error) {
+      alert('No route found: ' + route.error);
+    } else {
+      displayRouteOnMap(route);
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+  });
+```
+
+```javascript Axios
+const axios = require('axios');
+
+const routeData = {
+  from: { lat: 40.7128, lng: -74.0060 },
+  to: { lat: 40.7580, lng: -73.9855 }
+};
+
+axios.post('http://localhost:8080/route', routeData)
+  .then(response => {
+    const route = response.data;
+    if (route.error) {
+      console.error('Error:', route.error);
+    } else {
+      console.log('Route stops:', route.map(s => s.name));
+    }
+  })
+  .catch(error => {
+    console.error('Request failed:', error.message);
+  });
+```
+
+</CodeGroup>
+
+## Implementation Details
+
+The endpoint implementation (`src/server/server.js:27-38`):
+
+```javascript
+app.post("/route", (req, resp) => {
+    const routeData = req.body
+    ServerMockup()
+        .then(busStopsData => {
+            const route = findLogic.findRoute(busStopsData, routeData)
+            resp.json(route)
+        })
+        .catch((err) => {
+            console.error(err)
+            resp.json({ error: err.message })
+        })
+})
+```
+
+### Route Calculation Algorithm
+
+The route finding algorithm (`src/server/FindLogic.js:42`) uses several sophisticated techniques:
+
+1. **Distance Calculation**: Uses Haversine formula for accurate geographic distance
+2. **Walking Radius**: Finds stops within 0.8 km walking distance
+3. **Route Expansion**: Explores possible paths through the bus network
+4. **Optimization**: Selects the path that gets closest to the destination
+5. **Validation**: Ensures no stop is visited twice in the same route
+
+### Algorithm Parameters
+
+These parameters control the route calculation (defined in `src/server/FindLogic.js:34-38`):
+
+| Parameter | Value | Description |
+|-----------|-------|-------------|
+| `walkKmh` | 1 km/h | Walking speed for time calculations |
+| `busKmh` | 60 km/h | Average bus travel speed |
+| `busWaitH` | 0.5 hours | Expected wait time at stops |
+| `maxWalkKm` | 0.8 km | Maximum walking distance to/from stops |
+
+<Note>
+The algorithm will only consider stops within 0.8 km of your origin and destination. If no stops are within this range, the request will fail.
+</Note>
+
+### Data Flow
+
+1. Client sends POST request with `from` and `to` coordinates
+2. Server fetches all bus stop data via `ServerMockup()`
+3. `findLogic.findRoute()` calculates optimal path:
+   - Finds stops near origin (within 0.8 km)
+   - Finds stops near destination (within 0.8 km)
+   - Explores possible routes using breadth-first search
+   - Returns stops array for the best route
+4. Server returns the route array as JSON
+5. On error, returns error object
+
+## Error Handling
+
+Always implement proper error handling:
+
+```javascript
+async function calculateRoute(from, to) {
+  const response = await fetch('http://localhost:8080/route', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ from, to })
+  });
+  
+  const result = await response.json();
+  
+  if (result.error) {
+    // Handle different error types
+    if (result.error.includes('paradas para empezar')) {
+      return {
+        success: false,
+        message: 'No bus stops found near your location. Try a different starting point.'
+      };
+    } else if (result.error.includes('No hay rutas')) {
+      return {
+        success: false,
+        message: 'No route available between these locations. Try different points.'
+      };
+    } else {
+      return {
+        success: false,
+        message: 'Unable to calculate route. Please try again.'
+      };
+    }
+  }
+  
+  return {
+    success: true,
+    route: result
+  };
+}
+```
+
+## Use Cases
+
+### Display Route on Map
+
+```javascript
+async function showRouteOnMap(fromCoords, toCoords) {
+  const response = await fetch('http://localhost:8080/route', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ from: fromCoords, to: toCoords })
+  });
+  
+  const route = await response.json();
+  
+  if (!route.error) {
+    // Draw route line on map
+    const coordinates = route.map(stop => [stop.latitude, stop.longitude]);
+    drawPolyline(coordinates);
+    
+    // Add markers for each stop
+    route.forEach((stop, index) => {
+      addMarker({
+        lat: stop.latitude,
+        lng: stop.longitude,
+        title: `${index + 1}. ${stop.name}`,
+        icon: 'bus-stop'
+      });
+    });
+  }
+}
+```
+
+### Calculate Route Statistics
+
+```javascript
+function analyzeRoute(route) {
+  // Count unique bus routes used
+  const uniqueRoutes = new Set(route.map(stop => stop.branch_id));
+  const transfers = uniqueRoutes.size - 1;
+  
+  // Calculate total distance
+  let totalDistance = 0;
+  for (let i = 0; i < route.length - 1; i++) {
+    totalDistance += calculateDistance(
+      route[i].latitude, route[i].longitude,
+      route[i + 1].latitude, route[i + 1].longitude
+    );
+  }
+  
+  return {
+    stops: route.length,
+    transfers: transfers,
+    distance: totalDistance.toFixed(2) + ' km',
+    routes: Array.from(uniqueRoutes)
+  };
+}
+```
+
+### Interactive Route Planning
+
+```javascript
+// React component example
+function RoutePlanner() {
+  const [route, setRoute] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  
+  const findRoute = async (from, to) => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const response = await fetch('http://localhost:8080/route', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ from, to })
+      });
+      
+      const data = await response.json();
+      
+      if (data.error) {
+        setError(data.error);
+      } else {
+        setRoute(data);
+      }
+    } catch (err) {
+      setError('Network error. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  return (
+    <div>
+      {loading && <Spinner />}
+      {error && <ErrorMessage>{error}</ErrorMessage>}
+      {route && <RouteDisplay stops={route} />}
+    </div>
+  );
+}
+```
+
+## Performance Considerations
+
+- The algorithm explores up to 10,000 possible routes
+- Maximum of 50 iterations to prevent infinite loops
+- Routes are sorted by distance to destination for efficiency
+- Duplicate routes are filtered to optimize memory usage
+
+<Warning>
+For very complex route networks, calculation may take several seconds. Consider implementing a loading indicator in your UI.
+</Warning>
+
+## Related Endpoints
+
+<CardGroup cols={2}>
+  <Card title="Get All Routes" icon="list" href="/api/all-routes">
+    Retrieve bus stop data needed for mapping
+  </Card>
+  <Card title="API Overview" icon="book" href="/api/overview">
+    View complete API documentation
+  </Card>
+</CardGroup>

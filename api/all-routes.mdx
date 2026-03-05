@@ -1,0 +1,287 @@
+---
+title: 'Get All Routes'
+description: 'Retrieve all available bus stops and routes'
+api: 'GET http://localhost:8080/allRoutes'
+---
+
+## Overview
+
+The `/allRoutes` endpoint returns comprehensive data about all available bus stops organized by branch (route line). This endpoint is typically called once at application startup to populate the map and route planning system.
+
+## Endpoint
+
+```
+GET /allRoutes
+```
+
+## Request
+
+This endpoint does not require any parameters.
+
+### Headers
+
+No special headers are required.
+
+## Response
+
+The endpoint returns an array of branch objects, where each branch represents a bus route line with its associated stops.
+
+<ResponseField name="branches" type="array" required>
+  Array of branch objects representing different bus routes
+  
+  <Expandable title="Branch Object Properties">
+    <ResponseField name="id" type="number" required>
+      Unique identifier for the branch/route
+    </ResponseField>
+    
+    <ResponseField name="name" type="string" required>
+      Human-readable name of the bus route
+    </ResponseField>
+    
+    <ResponseField name="stops" type="array" required>
+      Array of stop objects along this route
+      
+      <Expandable title="Stop Object Properties">
+        <ResponseField name="id" type="number" required>
+          Unique identifier for the bus stop
+        </ResponseField>
+        
+        <ResponseField name="branch_id" type="number" required>
+          Reference to the parent branch/route ID
+        </ResponseField>
+        
+        <ResponseField name="name" type="string" required>
+          Name of the bus stop
+        </ResponseField>
+        
+        <ResponseField name="latitude" type="number" required>
+          Geographic latitude coordinate of the stop
+        </ResponseField>
+        
+        <ResponseField name="longitude" type="number" required>
+          Geographic longitude coordinate of the stop
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Success Response Example
+
+```json
+[
+  {
+    "id": 1,
+    "name": "Route 101",
+    "stops": [
+      {
+        "id": 1,
+        "branch_id": 1,
+        "name": "Main Street Station",
+        "latitude": 40.7128,
+        "longitude": -74.0060
+      },
+      {
+        "id": 2,
+        "branch_id": 1,
+        "name": "Central Park Stop",
+        "latitude": 40.7580,
+        "longitude": -73.9855
+      }
+    ]
+  },
+  {
+    "id": 2,
+    "name": "Route 202",
+    "stops": [
+      {
+        "id": 3,
+        "branch_id": 2,
+        "name": "Downtown Terminal",
+        "latitude": 40.7589,
+        "longitude": -73.9851
+      }
+    ]
+  }
+]
+```
+
+### Error Response
+
+If the external data service is unavailable or an error occurs:
+
+```json
+{
+  "error": "Error message describing what went wrong"
+}
+```
+
+## Code Examples
+
+<CodeGroup>
+
+```bash cURL
+curl http://localhost:8080/allRoutes
+```
+
+```javascript JavaScript Fetch
+// Using async/await
+async function getAllRoutes() {
+  try {
+    const response = await fetch('http://localhost:8080/allRoutes');
+    const busStops = await response.json();
+    
+    if (busStops.error) {
+      console.error('Error:', busStops.error);
+      return null;
+    }
+    
+    return busStops;
+  } catch (error) {
+    console.error('Network error:', error);
+    return null;
+  }
+}
+
+const routes = await getAllRoutes();
+console.log(`Found ${routes.length} bus routes`);
+```
+
+```javascript JavaScript Promise
+// Using promises
+fetch('http://localhost:8080/allRoutes')
+  .then(response => response.json())
+  .then(busStops => {
+    if (busStops.error) {
+      console.error('Error:', busStops.error);
+    } else {
+      console.log('Bus stops data:', busStops);
+    }
+  })
+  .catch(error => {
+    console.error('Network error:', error);
+  });
+```
+
+```javascript Axios
+const axios = require('axios');
+
+axios.get('http://localhost:8080/allRoutes')
+  .then(response => {
+    const busStops = response.data;
+    console.log(`Loaded ${busStops.length} routes`);
+  })
+  .catch(error => {
+    console.error('Error fetching routes:', error.message);
+  });
+```
+
+</CodeGroup>
+
+## Implementation Details
+
+The endpoint implementation (`src/server/server.js:17-24`):
+
+```javascript
+app.get("/allRoutes", (req, resp) => {
+    ServerMockup()
+        .then(busStopsData => resp.json(busStopsData))
+        .catch((err) => {
+            console.error(err)
+            resp.json({ error: err.message })
+        })
+})
+```
+
+### Data Flow
+
+1. Client sends GET request to `/allRoutes`
+2. Server calls `ServerMockup()` to fetch data from external service
+3. External Laravel service returns branch and stop data
+4. Server forwards the data as JSON response
+5. On error, server returns error object
+
+<Note>
+The external Laravel service at `http://localhost:8000/branch` must be running for this endpoint to function.
+</Note>
+
+## Error Handling
+
+Always check for the `error` property in the response:
+
+```javascript
+const response = await fetch('http://localhost:8080/allRoutes');
+const data = await response.json();
+
+if (data.error) {
+  // Handle error case
+  console.error('API returned error:', data.error);
+  // Show user-friendly message
+  showNotification('Unable to load bus routes. Please try again.');
+} else {
+  // Process successful response
+  displayRoutesOnMap(data);
+}
+```
+
+## Use Cases
+
+### Display All Stops on Map
+
+```javascript
+async function loadAndDisplayRoutes() {
+  const routes = await fetch('http://localhost:8080/allRoutes')
+    .then(r => r.json());
+  
+  routes.forEach(branch => {
+    branch.stops.forEach(stop => {
+      addMarkerToMap({
+        lat: stop.latitude,
+        lng: stop.longitude,
+        title: stop.name,
+        routeName: branch.name
+      });
+    });
+  });
+}
+```
+
+### Count Total Stops
+
+```javascript
+const routes = await fetch('http://localhost:8080/allRoutes')
+  .then(r => r.json());
+
+const totalStops = routes.reduce((count, branch) => 
+  count + branch.stops.length, 0
+);
+
+console.log(`Total stops across all routes: ${totalStops}`);
+```
+
+### Find Stops Near Location
+
+```javascript
+function findNearbyStops(routes, userLat, userLng, maxDistance = 0.8) {
+  const allStops = routes.flatMap(branch => branch.stops);
+  
+  return allStops.filter(stop => {
+    const distance = calculateDistance(
+      userLat, userLng, 
+      stop.latitude, stop.longitude
+    );
+    return distance <= maxDistance;
+  });
+}
+```
+
+## Related Endpoints
+
+<CardGroup cols={2}>
+  <Card title="Find Route" icon="route" href="/api/find-route">
+    Calculate optimal path between coordinates
+  </Card>
+  <Card title="API Overview" icon="book" href="/api/overview">
+    View all available endpoints
+  </Card>
+</CardGroup>

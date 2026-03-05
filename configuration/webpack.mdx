@@ -1,0 +1,471 @@
+---
+title: Webpack Configuration
+description: Understanding and customizing the Webpack build configuration
+---
+
+## Overview
+
+React Route Finder uses Webpack 4 to bundle the application code, handle JSX transformation, and optimize assets for production. This guide explains the complete webpack configuration and how to customize it.
+
+## Configuration File
+
+The webpack configuration is defined in `webpack.config.js` at the project root:
+
+<CodeGroup>
+
+```javascript webpack.config.js
+var webpack = require('webpack');
+var path = require('path');
+
+var BUILD_DIR = path.resolve(__dirname, 'public');
+var APP_DIR = path.resolve(__dirname, 'src/client');
+
+var config = {
+  entry: {
+    main : APP_DIR + '/index.jsx',
+  },
+  output: {
+    path: BUILD_DIR,
+    filename: '[name].js'
+  },
+  resolve: {
+    extensions: [".jsx", ".js"]
+  },
+  optimization: {
+    splitChunks: {
+        cacheGroups: {
+            commons: {
+                test: /[\\/]node_modules[\\/]/,
+                name: "vendors",
+                chunks: "all"
+            }
+        }
+    }
+  },
+  devtool: 'inline-source-map',
+  module : {
+    rules : [
+      {
+          test: /\.jsx?$/,
+          loader: "babel-loader",
+          query: {compact: false}
+      }
+    ]
+  }
+};
+
+module.exports = config;
+```
+
+</CodeGroup>
+
+## Entry Points
+
+### Main Entry
+
+The application has a single entry point that initializes the React application:
+
+```javascript
+entry: {
+  main : APP_DIR + '/index.jsx',
+}
+```
+
+- **Entry file**: `src/client/index.jsx`
+- **Purpose**: Mounts the React application to the DOM
+- **Output**: Generates `main.js` in the public directory
+
+<Note>
+The entry point uses the `.jsx` extension to indicate it contains JSX syntax. Webpack resolves this automatically based on the resolve configuration.
+</Note>
+
+### Adding Additional Entry Points
+
+To add more entry points (e.g., for separate pages):
+
+```javascript
+entry: {
+  main: APP_DIR + '/index.jsx',
+  admin: APP_DIR + '/admin.jsx',
+  analytics: APP_DIR + '/analytics.jsx'
+}
+```
+
+This generates separate bundles: `main.js`, `admin.js`, and `analytics.js`.
+
+## Output Configuration
+
+### Build Directory
+
+```javascript
+output: {
+  path: BUILD_DIR,
+  filename: '[name].js'
+}
+```
+
+- **Output directory**: `public/`
+- **Filename pattern**: `[name].js` (uses entry point name)
+- **Example output**: `main.js` for the main entry point
+
+### Customizing Output
+
+For production builds with cache busting:
+
+```javascript
+output: {
+  path: BUILD_DIR,
+  filename: '[name].[contenthash].js'
+}
+```
+
+<Warning>
+If you change the output filename pattern, update the script tags in `public/index.html` to match.
+</Warning>
+
+## Module Resolution
+
+```javascript
+resolve: {
+  extensions: [".jsx", ".js"]
+}
+```
+
+This configuration allows you to import files without specifying extensions:
+
+<CodeGroup>
+
+```javascript With Resolution
+// You can write
+import App from './App'
+
+// Instead of
+import App from './App.jsx'
+```
+
+</CodeGroup>
+
+Webpack automatically tries `.jsx` and `.js` extensions in order.
+
+## Code Splitting Strategy
+
+### Vendor Code Separation
+
+The configuration uses webpack's `splitChunks` optimization to separate vendor code:
+
+```javascript
+optimization: {
+  splitChunks: {
+    cacheGroups: {
+      commons: {
+        test: /[\\/]node_modules[\\/]/,
+        name: "vendors",
+        chunks: "all"
+      }
+    }
+  }
+}
+```
+
+<Steps>
+  <Step title="Identification">
+    Webpack identifies all modules from `node_modules/`
+  </Step>
+  
+  <Step title="Extraction">
+    Extracts these modules into a separate `vendors.js` bundle
+  </Step>
+  
+  <Step title="Caching Benefits">
+    Vendor code rarely changes, so browsers can cache it separately from application code
+  </Step>
+</Steps>
+
+### Benefits of Code Splitting
+
+- **Better caching**: Vendor code cached independently of app code
+- **Faster rebuilds**: Only app code rebuilds during development
+- **Smaller updates**: Users only download changed application code
+- **Parallel loading**: Browser can download both bundles simultaneously
+
+<Note>
+The `public/index.html` file includes both bundles in the correct order:
+
+```html
+<script src="vendors.js"></script>
+<script src="main.js"></script>
+```
+</Note>
+
+## Babel Loader Configuration
+
+### Loader Rules
+
+```javascript
+module: {
+  rules: [
+    {
+      test: /\.jsx?$/,
+      loader: "babel-loader",
+      query: {compact: false}
+    }
+  ]
+}
+```
+
+- **test**: Matches `.js` and `.jsx` files
+- **loader**: Uses babel-loader for transpilation
+- **query.compact**: Disables code compaction for better debugging
+
+### Babel Presets
+
+Babel configuration is defined in `.babelrc`:
+
+<CodeGroup>
+
+```json .babelrc
+{
+  "presets": ["react"]
+}
+```
+
+</CodeGroup>
+
+The `react` preset handles:
+- JSX transformation to React.createElement calls
+- React-specific optimizations
+- Display name inference for components
+
+### Adding Additional Presets
+
+To support modern JavaScript features:
+
+<CodeGroup>
+
+```json .babelrc
+{
+  "presets": [
+    "react",
+    ["env", {
+      "targets": {
+        "browsers": ["last 2 versions"]
+      }
+    }]
+  ]
+}
+```
+
+</CodeGroup>
+
+<Warning>
+The current configuration uses legacy Babel 6. Consider upgrading to Babel 7 for better performance and features:
+
+```bash
+npm install --save-dev @babel/core @babel/preset-react @babel/preset-env
+```
+</Warning>
+
+## Source Maps
+
+```javascript
+devtool: 'inline-source-map'
+```
+
+Source maps enable debugging of the original source code in the browser:
+
+- **inline-source-map**: Embeds source maps in the bundle
+- **Best for**: Development (easier debugging)
+- **Trade-off**: Larger bundle size
+
+### Source Map Options
+
+<CodeGroup>
+
+```javascript Development (Current)
+devtool: 'inline-source-map'
+// Fast, full debugging support
+```
+
+```javascript Production (Recommended)
+devtool: 'source-map'
+// Separate .map files, smaller bundles
+```
+
+```javascript Production (Minimal)
+devtool: false
+// No source maps, smallest bundles
+```
+
+</CodeGroup>
+
+## Build Modes
+
+### Development Mode
+
+Triggered by `npm run dev` or `webpack -d`:
+
+- Faster builds with minimal optimization
+- Includes source maps
+- More verbose error messages
+- Larger bundle sizes
+
+### Production Mode
+
+Triggered by `npm run build` or `webpack -p`:
+
+- Full optimization and minification
+- Tree shaking to remove unused code
+- Smaller bundle sizes
+- Mangled variable names
+
+## Customization Examples
+
+### Adding CSS Support
+
+To load CSS files:
+
+<Steps>
+  <Step title="Install Loaders">
+    ```bash
+    npm install --save-dev style-loader css-loader
+    ```
+  </Step>
+  
+  <Step title="Update Configuration">
+    ```javascript
+    module: {
+      rules: [
+        {
+          test: /\.jsx?$/,
+          loader: "babel-loader",
+          query: {compact: false}
+        },
+        {
+          test: /\.css$/,
+          use: ['style-loader', 'css-loader']
+        }
+      ]
+    }
+    ```
+  </Step>
+  
+  <Step title="Import CSS">
+    ```javascript
+    import './styles.css'
+    ```
+  </Step>
+</Steps>
+
+### Adding Image Support
+
+To load image files:
+
+```javascript
+module: {
+  rules: [
+    // ... existing rules
+    {
+      test: /\.(png|jpg|gif|svg)$/,
+      loader: 'file-loader',
+      options: {
+        name: '[name].[ext]',
+        outputPath: 'images/'
+      }
+    }
+  ]
+}
+```
+
+### Environment Variables
+
+To use environment-specific configuration:
+
+```javascript
+const webpack = require('webpack');
+
+module.exports = {
+  // ... other config
+  plugins: [
+    new webpack.DefinePlugin({
+      'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development'),
+      'process.env.API_URL': JSON.stringify(process.env.API_URL)
+    })
+  ]
+};
+```
+
+## Performance Optimization
+
+### Bundle Analysis
+
+To analyze bundle size:
+
+```bash
+npm install --save-dev webpack-bundle-analyzer
+```
+
+```javascript
+const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
+
+module.exports = {
+  // ... other config
+  plugins: [
+    new BundleAnalyzerPlugin()
+  ]
+};
+```
+
+### Further Code Splitting
+
+Split code by routes for lazy loading:
+
+```javascript
+optimization: {
+  splitChunks: {
+    chunks: 'all',
+    cacheGroups: {
+      vendors: {
+        test: /[\\/]node_modules[\\/]/,
+        name: 'vendors',
+        priority: 10
+      },
+      common: {
+        minChunks: 2,
+        priority: 5,
+        reuseExistingChunk: true
+      }
+    }
+  }
+}
+```
+
+## Troubleshooting
+
+### Build Fails with Memory Errors
+
+Increase Node.js memory limit:
+
+```bash
+node --max_old_space_size=4096 node_modules/.bin/webpack -p
+```
+
+### Babel Not Transforming JSX
+
+Ensure `.babelrc` is in the project root and contains the React preset.
+
+### Slow Build Times
+
+- Reduce the scope of babel-loader with `exclude`:
+  ```javascript
+  {
+    test: /\.jsx?$/,
+    exclude: /node_modules/,
+    loader: "babel-loader"
+  }
+  ```
+
+- Use webpack's cache feature:
+  ```javascript
+  loader: "babel-loader",
+  options: { cacheDirectory: true }
+  ```
